@@ -2,188 +2,132 @@
 
 import os
 import qi
-import zipfile
 import argparse
-import paramiko
-from scp import SCPClient
-import xml.etree.ElementTree as ET
 import clio
-
-
-class Connection():
-
-    install_path = os.path.join('/home/nao/.local/share/PackageManager/apps')
-
-    def __init__(self, ip, port='9559', username='nao', password='nao'):
-        self.ip = str(ip)
-        # self.port = int(port)
-        self.user = username
-        self.pw = password
-        self.ssh = paramiko.SSHClient()
-        self.ssh.load_system_host_keys()
-        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # auto-accept unknown keys
-        self.ssh.connect(self.ip,
-                         # port=self.port,
-                         username=self.user,
-                         password=self.pw,
-                         allow_agent=False,
-                         look_for_keys=False)  # already have pw, don't look for private keys
-        self.scp = SCPClient(self.ssh.get_transport())
-
-    def transfer(self, pkg_absolute_path):
-        """Transfer the package file at pkg_absolute_path onto the remote filesystem.
-        :param pkg_absolute_path: absolute path to the package file.
-
-        """
-        pkg_name = pkg_absolute_path.split(os.sep)[-1]
-        remote_path = os.path.join(Connection.install_path, pkg_name)
-        self.scp.put(pkg_absolute_path, remote_path)
-        return pkg_name
-
-    def delete_pkg_file(self, pkg_name):
-        """Remove pkg_name from apps/ on robot.
-        :param pkg_name: the name of the package, e.g. my-package.pkg
-
-        """
-        self.sftp = self.ssh.open_sftp()
-        self.sftp.remove(os.path.join(Connection.install_path, pkg_name))
-        self.sftp.close()
-
-    def get_package_uid(self, path):
-        with open(os.path.join(path, 'manifest.xml'), 'r') as manifest:
-            xml = ET.fromstring(manifest.read())
-            try:
-                uid = xml.attrib['uuid']
-                return uid
-            except KeyError:
-                print 'no UUID found'
-                return None
-
-    def zip_dir(self, path, zipfile):
-        """Create a zip of contents of path by traversing it."""
-        for root, dirs, files in os.walk(path):
-            for io in files:
-                zipfile.write(os.path.join(root, io),
-                              arcname=os.path.relpath(os.path.join(root, io), path))
-
-    def create_package(self, pkg_path=None):
-        """Create a package out of the contents of the current directory."""
-        if not pkg_path:
-            pkg_path = os.getcwd()
-        pkg = self.get_package_uid(pkg_path) + '.pkg'
-        path = os.path.join(pkg_path, '..', pkg)
-        zipf = zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)
-        self.zip_dir(pkg_path, zipf)
-        zipf.close()
-        return path
-
-    def get_installed_package_data(self, session):
-        pacman = session.service('PackageManager')
-        return pacman.packages()
-
-    def get_running_behaviors(self, session):
-        behman = session.service('ALBehaviorManager')
-        return behman.getRunningBehaviors()
-
-    def get_installed_behaviors(self, session):
-        behman = session.service('ALBehaviorManager')
-        return behman.getInstalledBehaviors()
-
-    def get_running_services(self, session):
-        servman = session.service('ALServiceManager')
-        return servman.services()
-
-    def start_behavior(self, session, behavior):
-        behman = session.service('ALBehaviorManager')
-        behman.startBehavior(behavior)
-
-    def stop_behavior(self, session, behavior):
-        behman = session.service('ALBehaviorManager')
-        behman.stopBehavior(behavior)
+import config
+from connection import Connection
+import socket
+from clint.textui import colored as col
 
 
 def main():
     parser = argparse.ArgumentParser(description='qidev')
-    subparsers = parser.add_subparsers(help='command')
+    parser.add_argument('--verbose', help='be verbose', dest='verbose',
+                        action='store_true', default=False)
 
-    # connect_parser = subparsers.add_parser('connect', help='Connect to a remote robot')
-    # connect_parser.add_argument('ip', help='IP address of the robot', action=ConnectAction)
+    subs = parser.add_subparsers(help='commands', dest='command')
 
-    install_parser = subparsers.add_parser('install', help='Install a package on a robot')
-    install_parser.add_argument('-p', help='Absolute path of the package directory')
-    install_parser.add_argument('ip', help='IP address of the robot', action=InstallAction)
+    config_parser = subs.add_parser('config', help='configure defaults for qidev')
+    config_parser.add_argument('field', help='the field to configure', type=str)
+    config_parser.add_argument('value', help='set field to value', type=str)
+
+    install_parser = subs.add_parser('install',
+                                     help='package and install a project directory on a robot')
+    install_parser.add_argument('-p', help='absolute to the directory to install as a package',
+                                type=str)
+
+    show_parser = subs.add_parser('show', help='show the packages installed on a robot')
+    mutex = show_parser.add_mutually_exclusive_group()
+    mutex.add_argument('-s', '--services', help='show the services installed on the robot',
+                       action='store_true', dest='s')
+    mutex.add_argument('-i', '--inspect', '--package',
+                       help='inspect package, prompts for package name',
+                       action='store_true', dest='i')
+    mutex.add_argument('-a', '--active', '--running',
+                       help='show active content (behaviors and services)',
+                       action='store_true', dest='active')
+
+    subs.add_parser('start', help='start a behavior, prompts for behavior name')
+    subs.add_parser('stop', help='stop a behavior, prompts for behavior name')
 
     args = parser.parse_args()
 
-    # qidev connect ip (create a connection, zip up a package, transfer it to robot at IP)
+    if args.command == 'install':
+        install_handler(args)
+
+    elif args.command == 'config':
+        config_handler(args)
+
+    elif args.command == 'show':
+        show_handler(args)
+
+    elif args.command == 'start' or args.command == 'stop':
+        behavior_handler(args.command, args)
 
 
-# class ConnectAction(argparse.Action):
-
-#     def __init__(self, option_strings, dest, nargs=None, **kwargs):
-#         argparse.Action.__init__(self, option_strings, dest, **kwargs)
-
-#     def __call__(self, parser, namespace, values, option_string=None):
-#         print 'connect to {}'.format(values)
-#         conn = Connection(str(values))
-
-
-class InstallAction(argparse.Action):
-
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        argparse.Action.__init__(self, option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        print 'install to {}'.format(values)
-        conn = Connection(str(values))
-        print namespace
-        if namespace.p:
-            abs_path = conn.create_package(namespace.p)
-        else:
-            abs_path = conn.create_package()
-        pkg_name = conn.transfer(abs_path)
-        session = qi.Session(values)
-        pacman = session.service('PackageManager')
-        pacman.install(os.path.join(Connection.install_path, pkg_name))
-        conn.delete_pkg_file(pkg_name)
+def install_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn, session = create_connection(ns, verb)
+    verb('Create package from directory: {}'.format(ns.p))
+    abs_path = conn.create_package(ns.p)
+    verb('Transfer package to {}'.format(conn.hostname))
+    pkg_name = conn.transfer(abs_path)
+    verb('Install package: {}'.format(pkg_name))
+    conn.install_package(session, abs_path)
+    verb('Clean up: {}'.format(pkg_name))
+    conn.delete_pkg_file(abs_path)
 
 
-# class ShowAction(argparse.Action):
-
-#     def __init__(self, option_strings, dest, nargs=None, **kwargs):
-#         argparse.Action.__init__(self, option_strings, dest, **kwargs)
-
-#     def __call__(self, parser, namespace, values, option_string=None):
-#         # qidev show (print installed packages)
-#         io = clio.IO()
-#         session = qi.Session(values)
-#         pkg_data = conn.get_installed_package_data(session)
-#         io.show_installed_packages(pkg_data)
+def config_handler(ns):
+    verb = verbose_print(ns.verbose)
+    field = ns.field.strip()
+    if field == 'hostname':
+        verb('Set {} to {}'.format(field, ns.value))
+        config.write_hostname(ns.value)
+    else:
+        print('ERROR: unsupported field {}'.format(field))
 
 
+def show_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn, session = create_connection(ns, verb)
+    io = clio.IO()
+    pkg_data = conn.get_installed_package_data(session)
+    if ns.s:
+        io.show_installed_services(pkg_data)
+    elif ns.i:
+        io.prompt_for_package(pkg_data)
+    elif ns.active:
+        io.show_running(conn.get_running_behaviors(session),
+                        conn.get_running_services(session),
+                        pkg_data)
+    else:
+        io.show_installed_packages(pkg_data)
 
 
-    # # qidev show -s
-    # io.show_installed_services(pkg_data)
-
-    # # qidev show -i
-    # # qidev inspect
-    # # io.prompt_for_package(pkg_data)
-
-    # # qidev info (show running behaviors, services)
-    # io.show_running(conn.get_running_behaviors(session),
-    #                 conn.get_running_services(session),
-    #                 pkg_data)
-
-    # # qidev start
-    # b = io.prompt_for_behavior(conn.get_installed_behaviors(session))
-    # conn.start_behavior(session, b)
-
-    # # qidev stop
-    # b = io.prompt_for_behavior(conn.get_running_behaviors(session))
-    # conn.stop_behavior(session, b)
+def behavior_handler(state, ns):
+    verb = verbose_print(ns.verbose)
+    conn, session = create_connection(ns, verb)
+    io = clio.IO()
+    if state == 'start':
+        b = io.prompt_for_behavior(conn.get_installed_behaviors(session))
+        conn.start_behavior(session, b)
+    else:
+        b = io.prompt_for_behavior(conn.get_running_behaviors(session))
+        conn.stop_behavior(session, b)
 
 
+def verbose_print(flag):
+    def func(text):
+        if flag:
+            print(text)
+    return func
+
+
+def create_connection(ns, verb):
+    try:
+        hostname = config.read_hostname()
+        verb('Connect to {}'.format(hostname))
+        session = qi.Session(hostname)
+        conn = Connection(hostname)
+    except socket.gaierror as e:
+        raise RuntimeError('{}: {} ... for hostname: {}'.format(col.red('ERROR'),
+                                                                e,
+                                                                col.blue(hostname)))
+    except socket.error as e:
+        # assuming this is a virtual bot...
+        conn = Connection(hostname, virtual=True)
+    return conn, session
 
 if __name__ == '__main__':
     main()

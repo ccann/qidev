@@ -38,6 +38,7 @@ class IO():
         print tabulate(table,
                        headers=['Package Name', 'Version', 'Behaviors', 'Services'],
                        tablefmt="orgtbl")
+        print ''
 
     def show_installed_services(self, pkg_data):
         """Pretty-print a table of installed services."""
@@ -51,6 +52,7 @@ class IO():
         print tabulate(table,
                        headers=['Package Name', 'Service Name', 'Autorun?'],
                        tablefmt='orgtbl')
+        print ''
 
     def prompt_for_package(self, pkg_data):
         """Prompt the user to specify the package name."""
