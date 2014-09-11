@@ -1,7 +1,7 @@
 # qidev
 
-see help
 ```sh    
+# see help
 $ qidev --help
 ```
 ## Connecting to a robot
