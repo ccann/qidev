@@ -5,9 +5,9 @@ see help
 $ qidev --help
 ```
 ## Connecting to a robot
-two methods accomplish the same thing
 ```sh   
 $ qidev config hostname Michelangelo.local
+# shortcut...
 $ qidev connect Michelangelo.local
 ```
 ## Installing a package
@@ -15,9 +15,7 @@ $ qidev connect Michelangelo.local
 ```sh
 $ cd /path/to/my/project/ 
 $ qidev install
-```
-alternatively
-```sh
+# alternatively
 $ qidev install -p /path/to/my/project/
 ```
 
