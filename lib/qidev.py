@@ -20,6 +20,9 @@ def main():
     config_parser.add_argument('field', help='the field to configure', type=str)
     config_parser.add_argument('value', help='set field to value', type=str)
 
+    connect_parser = subs.add_parser('connect', help='shortcut to config hostname')
+    connect_parser.add_argument('hostname', help='hostname of the robot', type=str)
+
     install_parser = subs.add_parser('install',
                                      help='package and install a project directory on a robot')
     install_parser.add_argument('-p', help='absolute to the directory to install as a package',
@@ -46,6 +49,9 @@ def main():
 
     elif args.command == 'config':
         config_handler(args)
+
+    elif args.command == 'connect':
+        connect_handler(args)
 
     elif args.command == 'show':
         show_handler(args)
@@ -77,6 +83,13 @@ def config_handler(ns):
         config.write_hostname(ns.value)
     else:
         print('ERROR: unsupported field {}'.format(field))
+
+
+def connect_handler(ns):
+    """Change hostname field of the .qidev file."""
+    verb = verbose_print(ns.verbose)
+    verb('Set hostname to {}'.format(ns.hostname))
+    config.write_hostname(ns.hostname)
 
 
 def show_handler(ns):
@@ -139,8 +152,8 @@ def create_connection(ns, verb):
     try:
         hostname = config.read_hostname()
         verb('Connect to {}'.format(hostname))
-        session = qi.Session(hostname)
         conn = Connection(hostname)
+        session = qi.Session(hostname)
     except socket.gaierror as e:
         raise RuntimeError('{}: {} ... for hostname: {}'.format(col.red('ERROR'),
                                                                 e,
