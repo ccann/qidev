@@ -145,5 +145,3 @@ class Connection():
     def stop_service(self, session, service):
         servman = session.service('ALServiceManager')
         servman.stopService(service)
-
-        

@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-import qi
+import os
 import argparse
+import socket
+import qi
 import clio
 import config
 from connection import Connection
-import socket
 from clint.textui import colored as col
 
 
@@ -64,14 +65,22 @@ def install_handler(ns):
     """Install a package to a remote host or locally."""
     verb = verbose_print(ns.verbose)
     conn, session = create_connection(ns, verb)
-    verb('Create package from directory: {}'.format(ns.p))
-    abs_path = conn.create_package(ns.p)
-    verb('Transfer package to {}'.format(conn.hostname))
-    pkg_name = conn.transfer(abs_path)
-    verb('Install package: {}'.format(pkg_name))
-    conn.install_package(session, abs_path)
-    verb('Clean up: {}'.format(pkg_name))
-    conn.delete_pkg_file(abs_path)
+    try:
+        verb('Create package from directory: {}'.format(ns.p))
+        abs_path = conn.create_package(ns.p)
+        verb('Transfer package to {}'.format(conn.hostname))
+        pkg_name = conn.transfer(abs_path)
+        verb('Install package: {}'.format(pkg_name))
+        conn.install_package(session, abs_path)
+        verb('Clean up: {}'.format(pkg_name))
+        conn.delete_pkg_file(abs_path)
+    except IOError:
+        if ns.p:
+            print('%s: %s is not a project directory (does not contain manifest.xml)' %
+                  (col.red('ERROR'), col.blue(ns.p)))
+        else:
+            print('%s: %s is not a project directory (does not contain manifest.xml)' %
+                  (col.red('ERROR'), col.blue(os.getcwd())))
 
 
 def config_handler(ns):
@@ -124,8 +133,7 @@ def state_handler(state, ns):
         elif inp in behaviors:
             conn.start_behavior(session, inp)
         else:
-            print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
-                                                                         inp))
+            print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'), inp))
     else:
         services = conn.get_running_services(session)
         behaviors = conn.get_running_behaviors(session)
@@ -135,8 +143,7 @@ def state_handler(state, ns):
         elif inp in behaviors:
             conn.stop_behavior(session, inp)
         else:
-            print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
-                                                                         inp))
+            print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'), inp))
 
 
 def verbose_print(flag):
@@ -155,8 +162,7 @@ def create_connection(ns, verb):
         conn = Connection(hostname)
         session = qi.Session(hostname)
     except socket.gaierror as e:
-        raise RuntimeError('{}: {} ... for hostname: {}'.format(col.red('ERROR'),
-                                                                e,
+        raise RuntimeError('{}: {} ... for hostname: {}'.format(col.red('ERROR'), e,
                                                                 col.blue(hostname)))
     except socket.error as e:
         # assuming this is a virtual bot...

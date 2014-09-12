@@ -3,6 +3,12 @@
 $ qidev --help  # see help
 ```
 
+## Installation
+Navigate to the root level of the qidev package, then:
+```sh
+$ pip install -r requirements.txt
+```
+
 ## Connecting to a robot
 ```sh
 $ qidev config hostname Michelangelo.local
