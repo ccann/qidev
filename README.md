@@ -1,7 +1,5 @@
 # qidev
-```sh
-$ qidev --help  # see help
-```
+
 
 ## Installation
 ```sh
@@ -12,7 +10,7 @@ $ sudo python setup.py install
 ```
 to test, open a terminal and type:
 ```sh
-qidev --help
+$ qidev --help
 ``` 
 
 ## Connecting to a robot
