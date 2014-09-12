@@ -4,10 +4,16 @@ $ qidev --help  # see help
 ```
 
 ## Installation
-Navigate to the root level of the qidev package, then:
 ```sh
+$ cd qidev/
 $ pip install -r requirements.txt
+$ cd qidev-X.X  # where X.X is the version number
+$ sudo python setup.py install
 ```
+to test, open a terminal and type:
+```sh
+qidev --help
+``` 
 
 ## Connecting to a robot
 ```sh

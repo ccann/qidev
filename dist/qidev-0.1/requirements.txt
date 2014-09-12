@@ -1,0 +1,7 @@
+clint==0.3.7
+args==0.1.0
+paramiko==1.14.1
+pycrypto==2.6.1
+ecdsa==0.11
+scp==0.8.0
+tabulate==0.7.2
