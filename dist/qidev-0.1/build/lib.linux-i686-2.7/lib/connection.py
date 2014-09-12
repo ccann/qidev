@@ -7,7 +7,8 @@ import zipfile
 
 class Connection():
 
-    def __init__(self, hostname, port='9559', username='nao', password='nao', virtual=False):
+    def __init__(self, hostname, port='9559', username='nao',
+                 password='nao', ssh=True, virtual=False):
         self.hostname = str(hostname)
         # self.port = int(port)
         self.user = username
@@ -19,17 +20,18 @@ class Connection():
             self.install_path = os.path.join('/home', 'nao')
         self.install_path = os.path.join(self.install_path,
                                          '.local', 'share', 'PackageManager', 'apps')
-        self.ssh = paramiko.SSHClient()
-        self.ssh.load_system_host_keys()
-        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # auto-accept unknown keys
-        if not self.virtual:
-            self.ssh.connect(self.hostname,
-                             # port=self.port,
-                             username=self.user,
-                             password=self.pw,
-                             allow_agent=False,
-                             look_for_keys=False)  # already have pw, don't look for private keys
-            self.scp = SCPClient(self.ssh.get_transport())
+        if ssh:
+            self.ssh = paramiko.SSHClient()
+            self.ssh.load_system_host_keys()
+            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # accept unknown keys
+            if not self.virtual:
+                self.ssh.connect(self.hostname,
+                                 # port=self.port,
+                                 username=self.user,
+                                 password=self.pw,
+                                 allow_agent=False,
+                                 look_for_keys=False)  # have pw, don't look for private keys
+                self.scp = SCPClient(self.ssh.get_transport())
 
     def transfer(self, pkg_absolute_path):
         """Transfer the package file at pkg_absolute_path onto the remote filesystem.
@@ -135,6 +137,14 @@ class Connection():
         behman = session.service('ALBehaviorManager')
         behman.stopBehavior(behavior)
 
+    def life_switch_focus(self, session, activity):
+        life = session.service('ALAutonomousLife')
+        life.switchFocus(activity)
+
+    def life_stop_focus(self, session):
+        life = session.service('ALAutonomousLife')
+        life.stopFocus()
+
     def start_service(self, session, service):
         servman = session.service('ALServiceManager')
         if servman.isServiceRunning(service):
@@ -146,4 +156,25 @@ class Connection():
         servman = session.service('ALServiceManager')
         servman.stopService(service)
 
-        
+    def life_off(self, session):
+        life = session.service('ALAutonomousLife')
+        life.setState('disabled')
+
+    def life_on(self, session):
+        life = session.service('ALAutonomousLife')
+        life.setState('solitary')
+
+    def robot_reboot(self, session):
+        print('Rebooting ...')
+        system = session.service('ALSystem')
+        system.reboot()
+
+    def robot_shutdown(self, session):
+        print('Shutting down ...')
+        system = session.service('ALSystem')
+        system.shutdown()
+
+    def set_volume(self, session, level):
+        print('Setting volume to {}'.format(level))
+        audio = session.service('ALAudioDevice')
+        audio.setOutputVolume(level)

@@ -7,4 +7,5 @@ lib/__init__.py
 lib/clio.py
 lib/config.py
 lib/connection.py
+lib/handlers.py
 lib/qidev.py

@@ -5,6 +5,5 @@ setup(
     version='0.1',
     packages=['lib', ],
     license='Commercial',
-    scripts=['qidev'],
-    package_data={'qidev': ['requirements.txt']}
+    scripts=['qidev']
 )

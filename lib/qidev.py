@@ -2,6 +2,7 @@
 
 import argparse
 import handlers as hs
+import sys
 
 
 def main():
@@ -85,4 +86,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit()
