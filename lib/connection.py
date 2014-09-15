@@ -189,3 +189,10 @@ class Connection():
             target = min(max(int(level), 0), 100)
         audio.setOutputVolume(target)
         return target
+
+    def toggle_stiffness(self, session, command):
+        motion = session.service('ALMotion')
+        if command == 'wake':
+            motion.wakeUp()
+        elif command == 'rest':
+            motion.rest()

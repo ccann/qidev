@@ -174,3 +174,10 @@ def volume_handler(ns):
     verb('volume level: {}'.format(ns.level))
     target = conn.set_volume(session, ns.level)
     print('Setting volume to {}'.format(col.magenta(target)))
+
+
+def wake_rest_handler(command, ns):
+    verb = verbose_print(ns.verbose)
+    conn, session = create_connection(ns, verb, ssh=False)
+    verb('wake/rest: {}'.format(command))
+    conn.toggle_stiffness(session, command)

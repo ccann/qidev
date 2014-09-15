@@ -51,8 +51,11 @@ def main():
     nao_parser.add_argument('action', help='restart, start, stop naoqi on remote host',
                             type=str)
 
-    reboot_parser = subs.add_parser('reboot', help='reboot the robot')
-    shutdown_parser = subs.add_parser('shutdown', help='shutdown the robot')
+    subs.add_parser('reboot', help='reboot the robot')
+    subs.add_parser('shutdown', help='shutdown the robot')
+
+    subs.add_parser('rest', help='put the robot to rest')
+    subs.add_parser('wake', help='wake up the robot')
 
     volume_parser = subs.add_parser('vol', help='adjust the volume on the robot')
     volume_parser.add_argument('level',
@@ -85,6 +88,9 @@ def main():
 
     elif args.command == 'shutdown' or args.command == 'reboot':
         hs.power_handler(args.command, args)
+
+    elif args.command == 'wake' or args.command == 'rest':
+        hs.wake_rest_handler(args.command, args)
 
     elif args.command == 'vol':
         hs.volume_handler(args)
