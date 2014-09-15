@@ -175,6 +175,17 @@ class Connection():
         system.shutdown()
 
     def set_volume(self, session, level):
-        print('Setting volume to {}'.format(level))
         audio = session.service('ALAudioDevice')
-        audio.setOutputVolume(level)
+        curr_level = int(audio.getOutputVolume())
+        if level == 'up':
+            target = min(curr_level + 10, 100)
+        elif level == 'down':
+            target = max(curr_level - 10, 0)
+        elif '+' in level:
+            target = min(curr_level + int(level.replace('+', '')), 100)
+        elif '-' in level:
+            target = max(curr_level - int(level.replace('-', '')), 0)
+        else:
+            target = min(max(int(level), 0), 100)
+        audio.setOutputVolume(target)
+        return target

@@ -172,4 +172,5 @@ def volume_handler(ns):
     verb = verbose_print(ns.verbose)
     conn, session = create_connection(ns, verb, ssh=False)
     verb('volume level: {}'.format(ns.level))
-    conn.set_volume(session, ns.level)
+    target = conn.set_volume(session, ns.level)
+    print('Setting volume to {}'.format(col.magenta(target)))

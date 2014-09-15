@@ -56,8 +56,9 @@ def main():
 
     volume_parser = subs.add_parser('vol', help='adjust the volume on the robot')
     volume_parser.add_argument('level',
-                               help='int from 0 to 100, add + or - prefix to modify current level',
-                               type=int)
+                               help='int from 0 to 100 with optional + or - prefix to modify ' +
+                               'current level; use "up" and "down" to increase or decrease ' +
+                               'volume by 10', type=str)
 
     args = parser.parse_args()
 
