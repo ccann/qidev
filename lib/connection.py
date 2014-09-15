@@ -3,6 +3,7 @@ import paramiko
 from scp import SCPClient
 import xml.etree.ElementTree as ET
 import zipfile
+import clio as io
 
 
 class Connection():
@@ -17,7 +18,7 @@ class Connection():
         if self.virtual:
             self.install_path = os.path.expanduser('~')
         else:
-            self.install_path = os.path.join('/home', 'nao')
+            self.install_path = '/home/nao/'  # always unix
         self.install_path = os.path.join(self.install_path,
                                          '.local', 'share', 'PackageManager', 'apps')
         if ssh:
@@ -196,3 +197,23 @@ class Connection():
             motion.wakeUp()
         elif command == 'rest':
             motion.rest()
+
+    def init_dialog_window(self, session):
+        memory = session.service('ALMemory')
+        dialog = session.service('ALDialog')
+        wr = memory.subscriber('WordRecognizedAndGrammar')
+        wr_id = wr.signal.connect(io.show_dialog_input)
+        li = memory.subscriber('Dialog/Answered')
+        li_id = li.signal.connect(io.show_dialog_output)
+        # sr = memory.subscriber('ALSpeechRecognition/Status')
+        # sr_id = sr.signal.connect(io.dialog_separator)
+        while(True):
+            try:
+                inp = raw_input()
+                dialog.forceInput(inp)
+            except KeyboardInterrupt:
+                wr.signal.disconnect(wr_id)
+                li.signal.disconnect(li_id)
+                # sr.signal.disconnect(sr_id)
+                print('')
+                break

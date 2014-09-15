@@ -43,8 +43,8 @@ def install_handler(ns):
     verb = verbose_print(ns.verbose)
     conn, session = create_connection(ns, verb)
     try:
-        verb('Create package from directory: {}'.format(ns.p))
-        abs_path = conn.create_package(ns.p)
+        verb('Create package from directory: {}'.format(ns.path))
+        abs_path = conn.create_package(ns.path)
         verb('Transfer package to {}'.format(conn.hostname))
         pkg_name = conn.transfer(abs_path)
         verb('Install package: {}'.format(pkg_name))
@@ -52,9 +52,9 @@ def install_handler(ns):
         verb('Clean up: {}'.format(pkg_name))
         conn.delete_pkg_file(abs_path)
     except IOError:
-        if ns.p:
+        if ns.path:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
-                  (col.red('ERROR'), col.blue(ns.p)))
+                  (col.red('ERROR'), col.blue(ns.path)))
         else:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
                   (col.red('ERROR'), col.blue(os.getcwd())))
@@ -181,3 +181,11 @@ def wake_rest_handler(command, ns):
     conn, session = create_connection(ns, verb, ssh=False)
     verb('wake/rest: {}'.format(command))
     conn.toggle_stiffness(session, command)
+
+
+def dialog_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn, session = create_connection(ns, verb, ssh=False)
+    verb('show dialog window')
+    io.show_dialog_header()
+    conn.init_dialog_window(session)

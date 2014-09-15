@@ -21,8 +21,8 @@ def main():
 
     install_parser = subs.add_parser('install',
                                      help='package and install a project directory on a robot')
-    install_parser.add_argument('-p', help='absolute to the directory to install as a package',
-                                type=str)
+    install_parser.add_argument('path', help='path to the project directory to package ' +
+                                'and install', type=str)
 
     show_parser = subs.add_parser('show', help='show the packages installed on a robot')
     mutex = show_parser.add_mutually_exclusive_group()
@@ -63,6 +63,8 @@ def main():
                                'current level; use "up" and "down" to increase or decrease ' +
                                'volume by 10', type=str)
 
+    dialog_parser = subs.add_parser('dialog', help='show dialog')
+
     args = parser.parse_args()
 
     if args.command == 'install':
@@ -94,6 +96,9 @@ def main():
 
     elif args.command == 'vol':
         hs.volume_handler(args)
+
+    elif args.command == 'dialog':
+        hs.dialog_handler(args)
 
 
 if __name__ == '__main__':

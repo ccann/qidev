@@ -2,6 +2,8 @@ from clint.textui import colored as col
 from clint.textui import puts, indent
 from tabulate import tabulate
 import readline
+import threading
+import time
 
 completions = list()
 
@@ -157,6 +159,33 @@ def show_running(behaviors, services, pkg_data):
             with indent(4):
                 puts('* {}  ({})'.format(bold(s), col.blue('service')))
     print('')
+
+
+def show_dialog_header():
+    print('')
+    print(' {} ----------------------------------------------- {} '.format(bold('Human'),
+                                                                           bold('Robot')))
+
+
+# def dialog_separator(value):
+    # if value == 'ListenOn':
+    #     def newline():
+    #         time.sleep(1)
+    #         print('')
+    #     t = threading.Thread(target=newline)
+    #     t.start()
+
+
+def show_dialog_input(value):
+    strat = 'BNF' if 'BNF' in str(value[2]) else str(value[2])
+    s = '{0} ({1:.0f}% {2})'.format(col.blue(value[0].strip()),
+                                    round(value[1] * 100),
+                                    strat)
+    print(s.ljust(60))
+
+
+def show_dialog_output(value):
+    print(col.red(value.strip().rjust(60)))
 
 
 def format_nao_output(file_like, command):
