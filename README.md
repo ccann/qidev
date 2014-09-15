@@ -2,12 +2,21 @@
 
 
 ## Installation
+
 ```sh
 $ cd qidev/
 $ pip install -r requirements.txt
 $ cd qidev-X.X  # where X.X is the version number
 $ sudo python setup.py install
 ```
+
+You're going to need naoqi in your PYTHONPATH. If you use fish shell you can
+add the following to your config.fish: 
+
+```sh
+set -x PYTHONPATH $HOME/path/to/choregraphe-suite-x.x.x.xx/lib $PYTHONPATH
+```
+
 to test, open a terminal and type:
 ```sh
 $ qidev --help
