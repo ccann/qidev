@@ -35,12 +35,14 @@ def main():
                        help='show active content (behaviors and services)',
                        action='store_true', dest='active')
 
-    start_parser = subs.add_parser('start', help='start a behavior, prompts for behavior name')
-    start_parser.add_argument('-b', '--bm', help='use behavior manager to start behavior directly',
-                              dest='bm', action='store_true')
-    stop_parser = subs.add_parser('stop', help='stop a behavior, prompts for behavior name')
-    stop_parser.add_argument('-b', '--bm', help='use behavior manager to stop behavior directly',
-                             dest='bm', action='store_true')
+    start_parser = subs.add_parser('start', help='start a behavior or service; prompts for ' +
+                                   'name on return')
+    start_parser.add_argument('-l', '-f', '--life', help='use ALife to focus an activity',
+                              dest='life', action='store_true')
+    stop_parser = subs.add_parser('stop', help='stop a behavior or service; prompts for ' +
+                                  'name on return')
+    stop_parser.add_argument('-l', '-f', '--life', help='use ALife to stop focused activity',
+                             dest='life', action='store_true')
 
     life_parser = subs.add_parser('life', help='toggle ALAutonomousLife')
     life_parser.add_argument('state', help='turn ALAutonomousLife on or off', type=str)
@@ -49,11 +51,13 @@ def main():
     nao_parser.add_argument('action', help='restart, start, stop naoqi on remote host',
                             type=str)
 
-    power_parser = subs.add_parser('robot', help='shutdown or reboot the robot')
-    power_parser.add_argument('action', help='shutdown or reboot', type=str)
+    reboot_parser = subs.add_parser('reboot', help='reboot the robot')
+    shutdown_parser = subs.add_parser('shutdown', help='shutdown the robot')
 
     volume_parser = subs.add_parser('vol', help='adjust the volume on the robot')
-    volume_parser.add_argument('level', help='int from 0 to 100', type=int)
+    volume_parser.add_argument('level',
+                               help='int from 0 to 100, add + or - prefix to modify current level',
+                               type=int)
 
     args = parser.parse_args()
 
@@ -78,8 +82,8 @@ def main():
     elif args.command == 'nao':
         hs.nao_handler(args)
 
-    elif args.command == 'robot':
-        hs.power_handler(args)
+    elif args.command == 'shutdown' or args.command == 'reboot':
+        hs.power_handler(args.command, args)
 
     elif args.command == 'vol':
         hs.volume_handler(args)
@@ -90,3 +94,5 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         sys.exit()
+    except RuntimeError as e:
+        print(e)

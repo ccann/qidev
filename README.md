@@ -44,11 +44,13 @@ $ qidev show -s  # see all services installed
 $ qidev show -a  # see all active content
 $ qidev show -i  # inspect a package for details
 ```
-RET prompts for package name with tab completion for package inpection
+return prompts for package name with tab completion for package inpection
 
 ## Starting and stopping behaviors and services
 ```sh
-$ qidev start  # (re)start a behavior/service  
-$ qidev stop  # stop a behavior/service
+$ qidev start  # (re)start a behavior or service
+$ qidev stop  # stop a behavior or service
+$ qidev start -l  # switch focus to an activity
+$ qidev stop -l  # stop focused activity
 ```
-RET prompts for behavior/service name with tab-completion
+return prompts for behavior/service name with tab-completion in all cases

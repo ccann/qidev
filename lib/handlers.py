@@ -100,29 +100,33 @@ def state_handler(state, ns):
     verb = verbose_print(ns.verbose)
     conn, session = create_connection(ns, verb, ssh=False)
     if state == 'start':
-        services = conn.get_declared_services(session)
         behaviors = conn.get_installed_behaviors(session)
-        inp = io.prompt_for_behavior(services + behaviors)
-        if inp in services:
-            verb('start service: {}'.format(inp))
-            conn.start_service(session, inp)
-        elif inp in behaviors:
-            if ns.bm:
+        if ns.life:
+            inp = io.prompt_for_behavior(behaviors)
+            try:
+                verb('switch focus to: {}'.format(inp))
+                conn.life_switch_focus(session, inp)
+            except RuntimeError:  # this is a huge hack but its not my fault
+                verb('couldnt find behavior {} so appending "/.": {}'.format(inp, inp+'/.'))
+                inp = inp+'/.'
+                verb('switch focus to: {}'.format(inp))
+                conn.life_switch_focus(session, inp)
+        else:
+            services = conn.get_declared_services(session)
+            inp = io.prompt_for_behavior(services + behaviors)
+            if inp in services:
+                verb('start service: {}'.format(inp))
+                conn.start_service(session, inp)
+            elif inp in behaviors:
                 verb('start behavior: {}'.format(inp))
                 conn.start_behavior(session, inp)
             else:
-                try:
-                    verb('switch focus to: {}'.format(inp))
-                    conn.life_switch_focus(session, inp)
-                except RuntimeError:  # this is a huge hack but its not my fault
-                    verb('couldnt find behavior {} so appending "/.": {}'.format(inp+'/.'))
-        else:
-            print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
-                                                                         inp))
+                print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
+                                                                             inp))
     elif state == 'stop':
-        if not ns.bm:  # stop focused activity
-            conn.life_stop_focus(session)
-        else:  # stop behavior manually with bm
+        if ns.life:
+            conn.life_stop_focus(session)  # stop focused activity
+        else:  # stop behavior/service
             services = conn.get_running_services(session)
             behaviors = conn.get_running_behaviors(session)
             inp = io.prompt_for_behavior(services + behaviors)
@@ -154,13 +158,13 @@ def nao_handler(ns):
     io.format_nao_output(sshout, ns.action)
 
 
-def power_handler(ns):
+def power_handler(command, ns):
     verb = verbose_print(ns.verbose)
     conn, session = create_connection(ns, verb, ssh=False)
-    verb('power action: {}'.format(ns.action))
-    if ns.action == 'reboot':
+    verb('robot: {}'.format(command))
+    if command == 'reboot':
         conn.robot_reboot(session)
-    if ns.action == 'shutdown':
+    if command == 'shutdown':
         conn.robot_shutdown(session)
 
 
