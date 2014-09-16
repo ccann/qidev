@@ -66,40 +66,8 @@ def main():
     dialog_parser = subs.add_parser('dialog', help='show dialog')
 
     args = parser.parse_args()
-
-    if args.command == 'install':
-        hs.install_handler(args)
-
-    elif args.command == 'config':
-        hs.config_handler(args)
-
-    elif args.command == 'connect':
-        hs.connect_handler(args)
-
-    elif args.command == 'show':
-        hs.show_handler(args)
-
-    elif args.command == 'start' or args.command == 'stop':
-        hs.state_handler(args.command, args)
-
-    elif args.command == 'life':
-        hs.life_handler(args)
-
-    elif args.command == 'nao':
-        hs.nao_handler(args)
-
-    elif args.command == 'shutdown' or args.command == 'reboot':
-        hs.power_handler(args.command, args)
-
-    elif args.command == 'wake' or args.command == 'rest':
-        hs.wake_rest_handler(args.command, args)
-
-    elif args.command == 'vol':
-        hs.volume_handler(args)
-
-    elif args.command == 'dialog':
-        hs.dialog_handler(args)
-
+    handler = args.command + '_handler'
+    getattr(hs, handler)(args)
 
 if __name__ == '__main__':
     try:

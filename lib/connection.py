@@ -1,31 +1,44 @@
+import qi
 import os
 import paramiko
 from scp import SCPClient
 import xml.etree.ElementTree as ET
 import zipfile
 import clio as io
+import config
+from clint.textui import colored as col
+import socket
 
 
 class Connection():
+    """Establish a connection to hostname and a qi self.session."""
 
-    def __init__(self, hostname, port='9559', username='nao',
-                 password='nao', ssh=True, virtual=False):
-        self.hostname = str(hostname)
+    def __init__(self, verb, port='9559', username='nao', password='nao',
+                 ssh=True, qi_session=True):
+        self.hostname = str(config.read_hostname())
+        verb('Connect to {}'.format(self.hostname))
         # self.port = int(port)
         self.user = username
         self.pw = password
-        self.virtual = virtual
-        if self.virtual:
-            self.install_path = os.path.expanduser('~')
+        self.virtual = False
+        self.ssh = None
+        self.scp = None
+        if qi_session:
+            verb('Create qi session')
+            try:
+                self.session = qi.Session(self.hostname)
+            except RuntimeError:
+                raise RuntimeError('%s: could not establish connection to %s' %
+                                   (col.red('ERROR'), col.blue(self.hostname)))
         else:
-            self.install_path = '/home/nao/'  # always unix
-        self.install_path = os.path.join(self.install_path,
-                                         '.local', 'share', 'PackageManager', 'apps')
+            self.session = None
         if ssh:
-            self.ssh = paramiko.SSHClient()
-            self.ssh.load_system_host_keys()
-            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # accept unknown keys
-            if not self.virtual:
+            verb('Establish connection via SSH')
+            try:
+                self.ssh = paramiko.SSHClient()
+                self.ssh.load_system_host_keys()
+                # accept unknown keys
+                self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 self.ssh.connect(self.hostname,
                                  # port=self.port,
                                  username=self.user,
@@ -33,6 +46,18 @@ class Connection():
                                  allow_agent=False,
                                  look_for_keys=False)  # have pw, don't look for private keys
                 self.scp = SCPClient(self.ssh.get_transport())
+            except socket.gaierror as e:
+                raise RuntimeError('{}: {} ... for hostname: {}'.format(col.red('ERROR'), e,
+                                                                        col.blue(self.hostname)))
+            except socket.error as e:
+                verb('Virtual robot detected')
+                self.virtual = True  # assuming this is a virtual bot... kind of a hack?
+        if self.virtual:
+            self.install_path = os.path.expanduser('~')
+        else:
+            self.install_path = '/home/nao/'  # always linux
+        self.install_path = os.path.join(self.install_path,
+                                         '.local', 'share', 'PackageManager', 'apps')
 
     def transfer(self, pkg_absolute_path):
         """Transfer the package file at pkg_absolute_path onto the remote filesystem.
@@ -77,13 +102,6 @@ class Connection():
                 print 'no UUID found'
                 return None
 
-    def zip_dir(self, path, zipfile):
-        """Create a zip of contents of path by traversing it."""
-        for root, dirs, files in os.walk(path):
-            for io in files:
-                zipfile.write(os.path.join(root, io),
-                              arcname=os.path.relpath(os.path.join(root, io), path))
-
     def create_package(self, pkg_path=None):
         """Create a package out of the contents of the current directory.
         :return: the absolute path to the package on the local machine.
@@ -93,90 +111,87 @@ class Connection():
         pkg = self.get_package_uid(pkg_path) + '.pkg'
         path = os.path.join(pkg_path, '..', pkg)
         zipf = zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED)
-        self.zip_dir(pkg_path, zipf)
+        zip_dir(pkg_path, zipf)
         zipf.close()
         return path
 
-    def install_package(self, session, abs_path):
+    def install_package(self, abs_path):
         """Install package on system.
         :param abs_path: absolute path to the package.
-        :param session: qi session
         """
-        pacman = session.service('PackageManager')
+        pacman = self.session.service('PackageManager')
         pkg_name = abs_path.split(os.sep)[-1]
         if self.virtual:
             pacman.install(os.path.join(abs_path))
         else:
             pacman.install(os.path.join(self.install_path, pkg_name))
 
-    def get_installed_package_data(self, session):
-        pacman = session.service('PackageManager')
+    def get_installed_package_data(self):
+        pacman = self.session.service('PackageManager')
         return pacman.packages()
 
-    def get_running_behaviors(self, session):
-        behman = session.service('ALBehaviorManager')
+    def get_running_behaviors(self):
+        behman = self.session.service('ALBehaviorManager')
         return behman.getRunningBehaviors()
 
-    def get_installed_behaviors(self, session):
-        behman = session.service('ALBehaviorManager')
+    def get_installed_behaviors(self):
+        behman = self.session.service('ALBehaviorManager')
         return behman.getInstalledBehaviors()
 
-    def get_running_services(self, session):
-        servman = session.service('ALServiceManager')
+    def get_running_services(self):
+        servman = self.session.service('ALServiceManager')
         services = [s['name'] for s in servman.services()]
         return [s for s in services if servman.isServiceRunning(s)]
 
-    def get_declared_services(self, session):
-        servman = session.service('ALServiceManager')
+    def get_declared_services(self):
+        servman = self.session.service('ALServiceManager')
         return [s['name'] for s in servman.services()]
 
-    def start_behavior(self, session, behavior):
-        behman = session.service('ALBehaviorManager')
+    def start_behavior(self, behavior):
+        behman = self.session.service('ALBehaviorManager')
         behman.startBehavior(behavior)
 
-    def stop_behavior(self, session, behavior):
-        behman = session.service('ALBehaviorManager')
+    def stop_behavior(self, behavior):
+        behman = self.session.service('ALBehaviorManager')
         behman.stopBehavior(behavior)
 
-    def life_switch_focus(self, session, activity):
-        life = session.service('ALAutonomousLife')
+    def life_switch_focus(self, activity):
+        life = self.session.service('ALAutonomousLife')
         life.switchFocus(activity)
 
-    def life_stop_focus(self, session):
-        life = session.service('ALAutonomousLife')
+    def life_stop_focus(self):
+        life = self.session.service('ALAutonomousLife')
         life.stopFocus()
 
-    def start_service(self, session, service):
-        servman = session.service('ALServiceManager')
+    def start_service(self, service):
+        servman = self.session.service('ALServiceManager')
         if servman.isServiceRunning(service):
             servman.restartService(service)
         else:
             servman.startService(service)
 
-    def stop_service(self, session, service):
-        servman = session.service('ALServiceManager')
+    def stop_service(self, service):
+        servman = self.session.service('ALServiceManager')
         servman.stopService(service)
 
-    def life_off(self, session):
-        life = session.service('ALAutonomousLife')
+    def life_off(self):
+        life = self.session.service('ALAutonomousLife')
         life.setState('disabled')
 
-    def life_on(self, session):
-        life = session.service('ALAutonomousLife')
+    def life_on(self):
+        life = self.session.service('ALAutonomousLife')
         life.setState('solitary')
 
-    def robot_reboot(self, session):
-        print('Rebooting ...')
-        system = session.service('ALSystem')
+    def robot_reboot(self):
+        system = self.session.service('ALSystem')
         system.reboot()
 
-    def robot_shutdown(self, session):
-        print('Shutting down ...')
-        system = session.service('ALSystem')
+    def robot_shutdown(self):
+        system = self.session.service('ALSystem')
         system.shutdown()
 
-    def set_volume(self, session, level):
-        audio = session.service('ALAudioDevice')
+    def set_volume(self, level):
+        audio = self.session.service('ALAudioDevice')
         curr_level = int(audio.getOutputVolume())
         if level == 'up':
             target = min(curr_level + 10, 100)
@@ -191,16 +206,18 @@ class Connection():
         audio.setOutputVolume(target)
         return target
 
-    def toggle_stiffness(self, session, command):
-        motion = session.service('ALMotion')
-        if command == 'wake':
-            motion.wakeUp()
-        elif command == 'rest':
-            motion.rest()
+    def wake_up(self):
+        motion = self.session.service('ALMotion')
+        motion.wakeUp()
 
-    def init_dialog_window(self, session):
-        memory = session.service('ALMemory')
-        dialog = session.service('ALDialog')
+    def rest(self):
+        motion = self.session.service('ALMotion')
+        motion.rest()
+
+    def init_dialog_window(self):
+        io.show_dialog_header()
+        memory = self.session.service('ALMemory')
+        dialog = self.session.service('ALDialog')
         wr = memory.subscriber('WordRecognizedAndGrammar')
         wr_id = wr.signal.connect(io.show_dialog_input)
         li = memory.subscriber('Dialog/Answered')
@@ -217,3 +234,11 @@ class Connection():
                 # sr.signal.disconnect(sr_id)
                 print('')
                 break
+
+
+def zip_dir(path, zipfile):
+    """Create a zip of contents of path by traversing it."""
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            zipfile.write(os.path.join(root, f),
+                          arcname=os.path.relpath(os.path.join(root, f), path))

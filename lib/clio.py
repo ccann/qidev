@@ -2,8 +2,8 @@ from clint.textui import colored as col
 from clint.textui import puts, indent
 from tabulate import tabulate
 import readline
-import threading
-import time
+# import threading
+# import time
 
 completions = list()
 
