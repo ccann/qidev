@@ -14,7 +14,7 @@ You're going to need naoqi (in choregraphe/lib) in your PYTHONPATH. If you use f
 add the following to your config.fish: 
 
 ```sh
-set -x PYTHONPATH $HOME/path/to/choregraphe-suite-x.x.x.xx/lib $PYTHONPATH
+$ set -x PYTHONPATH $HOME/path/to/choregraphe-suite-x.x.x.xx/lib $PYTHONPATH
 ```
 
 to test, open a terminal and type:
