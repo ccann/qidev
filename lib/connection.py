@@ -16,6 +16,7 @@ class Connection():
     def __init__(self, verb, port='9559', username='nao', password='nao',
                  ssh=True, qi_session=True):
         self.hostname = str(config.read_hostname())
+        self.verb = verb
         verb('Connect to {}'.format(self.hostname))
         # self.port = int(port)
         self.user = username
@@ -128,7 +129,10 @@ class Connection():
 
     def get_installed_package_data(self):
         pacman = self.session.service('PackageManager')
-        return pacman.packages()
+        try:
+            return pacman.packages2()
+        except AttributeError:
+            return pacman.packages()
 
     def get_running_behaviors(self):
         behman = self.session.service('ALBehaviorManager')
@@ -138,8 +142,15 @@ class Connection():
         behman = self.session.service('ALBehaviorManager')
         return behman.getInstalledBehaviors()
 
+    def get_behavior_nature(self, b):
+        behman = self.session.service('ALBehaviorManager')
+        return behman.getBehaviorNature(b)
+
     def get_running_services(self):
         servman = self.session.service('ALServiceManager')
+        # 'execStart': path to launcher
+        # 'name': name
+        # 'running': true or false
         services = [s['name'] for s in servman.services()]
         return [s for s in services if servman.isServiceRunning(s)]
 
@@ -234,6 +245,10 @@ class Connection():
                 # sr.signal.disconnect(sr_id)
                 print('')
                 break
+
+    def get_robot_name(self):
+        system = self.session.service('ALSystem')
+        return system.robotName()
 
 
 def zip_dir(path, zipfile):

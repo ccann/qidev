@@ -3,6 +3,9 @@ import clio as io
 import config
 from connection import Connection
 from clint.textui import colored as col
+import curses
+# import functools
+# import urwid
 
 
 def verbose_print(flag):
@@ -57,17 +60,64 @@ def show_handler(ns):
     """Show information about a package, service, active content, etc."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
+    verb('Check installed packages...')
     pkg_data = conn.get_installed_package_data()
     if ns.s:
-        io.show_installed_services(pkg_data)
+        verb('Show installed services')
+        io.show_installed_services(verb, pkg_data)
     elif ns.i:
         io.prompt_for_package(pkg_data)
     elif ns.active:
+        verb('Show active content')
         io.show_running(conn.get_running_behaviors(),
                         conn.get_running_services(),
                         pkg_data)
+
+        # def refresh_content(value, *args):
+        #     behaviors = conn.get_running_behaviors()
+        #     services = conn.get_running_services()
+        #     choices = behaviors + services
+        #     os.write(io.pipe, ';'.join(choices))
+
+        # behman = conn.session.service('ALBehaviorManager')
+        # servman = conn.session.service('ALServiceManager')
+        # beh_started_id = behman.behaviorStarted.connect(refresh_content)
+        # beh_stopped_id = behman.behaviorStopped.connect(refresh_content)
+        # serv_started_id = servman.serviceStarted.connect(refresh_content)
+        # serv_stopped_id = servman.serviceStopped.connect(refresh_content)
+
+        # io.show_running(conn)
+        # stdscr = ready_screen()
+
+        # def refresh_content(value, *args):
+        #     if not value == 'first':
+        #         # curses.flash()
+        #         stdscr.clear()
+        #     io.show_running(stdscr,
+        #                     conn,
+        #                     value,
+        #                     pkg_data)
+        #     stdscr.refresh()
+        # refresh_content('first')
+
+        # def disconnect():
+        #     behman.behaviorStarted.disconnect(beh_started_id)
+        #     behman.behaviorStopped.disconnect(beh_stopped_id)
+        #     servman.serviceStarted.disconnect(serv_started_id)
+        #     servman.serviceStopped.disconnect(serv_stopped_id)
+        #     close_screen(stdscr)
+
+        # while(True):
+        #     try:
+        #         c = stdscr.getch()
+        #         if c == ord('q'):
+        #             disconnect()
+        #             break
+        #     except KeyboardInterrupt:
+        #         disconnect()
+        #     break
     else:
-        io.show_installed_packages(pkg_data)
+        io.show_installed_packages(verb, pkg_data)
 
 
 def start_handler(ns):
@@ -124,7 +174,7 @@ def life_handler(ns):
     elif ns.state == 'off':
         conn.life_off()
     else:
-        print('life state can only be on or off')
+        print('Life state can only be "on" or "off"')
 
 
 def nao_handler(ns):
@@ -152,7 +202,7 @@ def shutdown_handler(ns):
 def vol_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
-    verb('volume level: {}'.format(ns.level))
+    verb('Volume level: {}'.format(ns.level))
     target = conn.set_volume(ns.level)
     print('Setting volume to {}'.format(col.magenta(target)))
 
@@ -160,19 +210,37 @@ def vol_handler(ns):
 def wake_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
-    print('Waking up {}'.format(conn.hostname))
+    print('Waking up {}'.format(conn.get_robot_name()))
     conn.wake_up()
 
 
 def rest_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
-    print('Put {} to rest'.format(conn.hostname))
+    print('Put {} to rest'.format(conn.get_robot_name()))
     conn.rest()
 
 
 def dialog_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
-    verb('show dialog window')
+    verb('Show dialog window')
     conn.init_dialog_window()
+
+
+def ready_screen():
+    stdscr = curses.initscr()
+    curses.start_color()
+    curses.use_default_colors()
+    curses.noecho()
+    curses.curs_set(0)
+    curses.cbreak()  # react instantly to 'q' for example
+    return stdscr
+
+
+def close_screen(stdscr):
+    curses.nocbreak()
+    stdscr.keypad(0)
+    curses.curs_set(1)
+    curses.echo()  # undo everything
+    curses.endwin()

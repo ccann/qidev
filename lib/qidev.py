@@ -32,7 +32,7 @@ def main():
                        help='inspect package, prompts for package name',
                        action='store_true', dest='i')
     mutex.add_argument('-a', '--active', '--running',
-                       help='show active content (behaviors and services)',
+                       help='show active content (behaviors and services) with realtime updates',
                        action='store_true', dest='active')
 
     start_parser = subs.add_parser('start', help='start a behavior or service; prompts for ' +
