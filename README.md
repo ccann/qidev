@@ -10,7 +10,7 @@ $ cd dist/qidev-X.X  # where X.X is the version number
 $ sudo python setup.py install
 ```
 
-You're going to need naoqi/lib in your PYTHONPATH. If you use fish shell you can
+You're going to need naoqi (in choregraphe/lib) in your PYTHONPATH. If you use fish shell you can
 add the following to your config.fish: 
 
 ```sh
