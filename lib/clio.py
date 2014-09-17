@@ -3,6 +3,7 @@ from clint.textui import puts, indent
 from tabulate import tabulate
 import readline
 import parser
+import sys
 # import curses
 # import urwid
 # import threading
@@ -78,7 +79,10 @@ def prompt_for_package(pkg_data):
     readline.set_completer_delims('')
     readline.parse_and_bind("tab: complete")
     readline.set_completer(completer)
-    inp = raw_input('Enter package name or UUID (tab to complete)\n> ')
+    try:
+        inp = raw_input('Enter package name or UUID (tab to complete)\n> ')
+    except KeyboardInterrupt:
+        sys.exit()
     show_package_details(inp, pkg_data)
 
 
@@ -89,7 +93,10 @@ def prompt_for_behavior(behaviors):
     readline.set_completer_delims('')
     readline.parse_and_bind("tab: complete")
     readline.set_completer(completer)
-    inp = raw_input('Enter package-uuid/behavior-name (tab to complete)\n> ')
+    try:
+        inp = raw_input('Enter package-uuid/behavior-name (tab to complete)\n> ')
+    except KeyboardInterrupt:
+        sys.exit()
     return inp
 
 

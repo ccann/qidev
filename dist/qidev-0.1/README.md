@@ -10,7 +10,7 @@ $ cd qidev-X.X  # where X.X is the version number
 $ sudo python setup.py install
 ```
 
-You're going to need naoqi in your PYTHONPATH. If you use fish shell you can
+You're going to need naoqi/lib in your PYTHONPATH. If you use fish shell you can
 add the following to your config.fish: 
 
 ```sh
@@ -31,10 +31,10 @@ $ qidev connect Michelangelo.local
 
 ## Installing a package
 ```sh
+$ qidev install --help
 $ cd /path/to/my/project/ 
-$ qidev install
-# alternatively, specify a path
-$ qidev install -p /path/to/my/project/
+$ qidev install .
+$ qidev install /path/to/my/project/  # alternatively
 ```
 
 ## Showing content
@@ -54,3 +54,43 @@ $ qidev start -l  # switch focus to an activity
 $ qidev stop -l  # stop focused activity
 ```
 return prompts for behavior/service name with tab-completion in all cases
+
+## Autonomous Life Management
+```sh
+$ qidev life on
+$ qidev life off
+```
+
+## NaoQi Management
+```sh
+$ qidev nao restart
+$ qidev nao stop
+$ qidev nao start
+```
+
+## Power Management
+```sh
+$ qidev reboot  
+$ qidev shutdown  
+```
+
+## Stiffness
+```sh
+$ qidev rest  # put robot to rest
+$ qidev wake  # wake up robot
+```
+
+## Volume
+```sh
+$ qidev vol n  # set volume to 0 <= n <= 100
+$ qidev vol +n  # increase current volume by n
+$ qidev vol -n  # decrease current volume by n
+$ qidev vol up  # increase volume by 10
+$ qidev vol down  # decrease volume by 10
+```
+
+## Dialog
+```sh
+$ qidev dialog  # show dialog window
+```
+Type to force input to the robot.
