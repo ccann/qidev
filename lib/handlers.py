@@ -3,7 +3,7 @@ import clio as io
 import config
 from connection import Connection
 from clint.textui import colored as col
-import curses
+# import curses
 # import functools
 # import urwid
 
@@ -228,19 +228,19 @@ def dialog_handler(ns):
     conn.init_dialog_window()
 
 
-def ready_screen():
-    stdscr = curses.initscr()
-    curses.start_color()
-    curses.use_default_colors()
-    curses.noecho()
-    curses.curs_set(0)
-    curses.cbreak()  # react instantly to 'q' for example
-    return stdscr
+# def ready_screen():
+#     stdscr = curses.initscr()
+#     curses.start_color()
+#     curses.use_default_colors()
+#     curses.noecho()
+#     curses.curs_set(0)
+#     curses.cbreak()  # react instantly to 'q' for example
+#     return stdscr
 
 
-def close_screen(stdscr):
-    curses.nocbreak()
-    stdscr.keypad(0)
-    curses.curs_set(1)
-    curses.echo()  # undo everything
-    curses.endwin()
+# def close_screen(stdscr):
+#     curses.nocbreak()
+#     stdscr.keypad(0)
+#     curses.curs_set(1)
+#     curses.echo()  # undo everything
+#     curses.endwin()
