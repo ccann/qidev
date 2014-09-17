@@ -1,10 +1,11 @@
 import os
-import socket
-import qi
 import clio as io
 import config
 from connection import Connection
 from clint.textui import colored as col
+# import curses
+# import functools
+# import urwid
 
 
 def verbose_print(flag):
@@ -15,46 +16,23 @@ def verbose_print(flag):
     return func
 
 
-def create_connection(ns, verb, ssh=True, create_session=True):
-    """Establish a connection to hostname and a qi session."""
-    hostname = config.read_hostname()
-    if create_session:
-        try:
-            session = qi.Session(hostname)
-        except RuntimeError:
-            raise RuntimeError('%s: could not establish connection to %s' %
-                               (col.red('ERROR'), col.blue(hostname)))
-    else:
-        session = None
-    try:
-        verb('connect to {}'.format(hostname))
-        conn = Connection(hostname, ssh=ssh)
-    except socket.gaierror as e:
-        raise RuntimeError('{}: {} ... for hostname: {}'.format(col.red('ERROR'), e,
-                                                                col.blue(hostname)))
-    except socket.error as e:
-        # assuming this is a virtual bot... kind of a hack
-        conn = Connection(hostname, virtual=True, ssh=ssh)
-    return conn, session
-
-
 def install_handler(ns):
     """Install a package to a remote host or locally."""
     verb = verbose_print(ns.verbose)
-    conn, session = create_connection(ns, verb)
+    conn = Connection(verb)
     try:
-        verb('Create package from directory: {}'.format(ns.p))
-        abs_path = conn.create_package(ns.p)
+        verb('Create package from directory: {}'.format(ns.path))
+        abs_path = conn.create_package(ns.path)
         verb('Transfer package to {}'.format(conn.hostname))
         pkg_name = conn.transfer(abs_path)
         verb('Install package: {}'.format(pkg_name))
-        conn.install_package(session, abs_path)
+        conn.install_package(abs_path)
         verb('Clean up: {}'.format(pkg_name))
         conn.delete_pkg_file(abs_path)
     except IOError:
-        if ns.p:
+        if ns.path:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
-                  (col.red('ERROR'), col.blue(ns.p)))
+                  (col.red('ERROR'), col.blue(ns.path)))
         else:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
                   (col.red('ERROR'), col.blue(os.getcwd())))
@@ -81,91 +59,188 @@ def connect_handler(ns):
 def show_handler(ns):
     """Show information about a package, service, active content, etc."""
     verb = verbose_print(ns.verbose)
-    conn, session = create_connection(ns, verb, ssh=False)
-    pkg_data = conn.get_installed_package_data(session)
+    conn = Connection(verb, ssh=False)
+    verb('Check installed packages...')
+    pkg_data = conn.get_installed_package_data()
     if ns.s:
-        io.show_installed_services(pkg_data)
+        verb('Show installed services')
+        io.show_installed_services(verb, pkg_data)
     elif ns.i:
         io.prompt_for_package(pkg_data)
     elif ns.active:
-        io.show_running(conn.get_running_behaviors(session),
-                        conn.get_running_services(session),
+        verb('Show active content')
+        io.show_running(conn.get_running_behaviors(),
+                        conn.get_running_services(),
                         pkg_data)
+
+        # def refresh_content(value, *args):
+        #     behaviors = conn.get_running_behaviors()
+        #     services = conn.get_running_services()
+        #     choices = behaviors + services
+        #     os.write(io.pipe, ';'.join(choices))
+
+        # behman = conn.session.service('ALBehaviorManager')
+        # servman = conn.session.service('ALServiceManager')
+        # beh_started_id = behman.behaviorStarted.connect(refresh_content)
+        # beh_stopped_id = behman.behaviorStopped.connect(refresh_content)
+        # serv_started_id = servman.serviceStarted.connect(refresh_content)
+        # serv_stopped_id = servman.serviceStopped.connect(refresh_content)
+
+        # io.show_running(conn)
+        # stdscr = ready_screen()
+
+        # def refresh_content(value, *args):
+        #     if not value == 'first':
+        #         # curses.flash()
+        #         stdscr.clear()
+        #     io.show_running(stdscr,
+        #                     conn,
+        #                     value,
+        #                     pkg_data)
+        #     stdscr.refresh()
+        # refresh_content('first')
+
+        # def disconnect():
+        #     behman.behaviorStarted.disconnect(beh_started_id)
+        #     behman.behaviorStopped.disconnect(beh_stopped_id)
+        #     servman.serviceStarted.disconnect(serv_started_id)
+        #     servman.serviceStopped.disconnect(serv_stopped_id)
+        #     close_screen(stdscr)
+
+        # while(True):
+        #     try:
+        #         c = stdscr.getch()
+        #         if c == ord('q'):
+        #             disconnect()
+        #             break
+        #     except KeyboardInterrupt:
+        #         disconnect()
+        #     break
     else:
-        io.show_installed_packages(pkg_data)
+        io.show_installed_packages(verb, pkg_data)
 
 
-def state_handler(state, ns):
-    """Start or stop a behavior or service."""
+def start_handler(ns):
     verb = verbose_print(ns.verbose)
-    conn, session = create_connection(ns, verb, ssh=False)
-    if state == 'start':
-        services = conn.get_declared_services(session)
-        behaviors = conn.get_installed_behaviors(session)
+    conn = Connection(verb, ssh=False)
+    behaviors = conn.get_installed_behaviors()
+    if ns.life:
+        inp = io.prompt_for_behavior(behaviors)
+        try:
+            verb('Switch focus to: {}'.format(inp))
+            conn.life_switch_focus(inp)
+        except RuntimeError:  # this is a huge hack but its not my fault
+            verb('Couldnt find behavior {} so appending "/.": {}'.format(inp, inp+'/.'))
+            inp = inp+'/.'
+            verb('switch focus to: {}'.format(inp))
+            conn.life_switch_focus(inp)
+    else:
+        services = conn.get_declared_services()
         inp = io.prompt_for_behavior(services + behaviors)
         if inp in services:
-            verb('start service: {}'.format(inp))
-            conn.start_service(session, inp)
+            verb('Start service: {}'.format(inp))
+            conn.start_service(inp)
         elif inp in behaviors:
-            if ns.bm:
-                verb('start behavior: {}'.format(inp))
-                conn.start_behavior(session, inp)
-            else:
-                try:
-                    verb('switch focus to: {}'.format(inp))
-                    conn.life_switch_focus(session, inp)
-                except RuntimeError:  # this is a huge hack but its not my fault
-                    verb('couldnt find behavior {} so appending "/.": {}'.format(inp+'/.'))
+            verb('Start behavior: {}'.format(inp))
+            conn.start_behavior(inp)
         else:
             print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
                                                                          inp))
-    elif state == 'stop':
-        if not ns.bm:  # stop focused activity
-            conn.life_stop_focus(session)
-        else:  # stop behavior manually with bm
-            services = conn.get_running_services(session)
-            behaviors = conn.get_running_behaviors(session)
-            inp = io.prompt_for_behavior(services + behaviors)
-            if inp in services:
-                conn.stop_service(session, inp)
-            elif inp in behaviors:
-                conn.stop_behavior(session, inp)
-            else:
-                print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
-                                                                             inp))
+
+
+def stop_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn = Connection(verb, ssh=False)
+    if ns.life:
+        conn.life_stop_focus()  # stop focused activity
+    else:  # stop behavior/service
+        services = conn.get_running_services()
+        behaviors = conn.get_running_behaviors()
+        inp = io.prompt_for_behavior(services + behaviors)
+        if inp in services:
+            conn.stop_service(inp)
+        elif inp in behaviors:
+            conn.stop_behavior(inp)
+        else:
+            print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
+                                                                         inp))
 
 
 def life_handler(ns):
     verb = verbose_print(ns.verbose)
-    conn, session = create_connection(ns, verb, ssh=False)
+    conn = Connection(verb, ssh=False)
     if ns.state == 'on':
-        conn.life_on(session)
+        conn.life_on()
     elif ns.state == 'off':
-        conn.life_off(session)
+        conn.life_off()
     else:
-        print('life state can only be on or off')
+        print('Life state can only be "on" or "off"')
 
 
 def nao_handler(ns):
     verb = verbose_print(ns.verbose)
-    conn, session = create_connection(ns, verb, create_session=False)
+    conn = Connection(verb, qi_session=False)
     verb('nao action: {}'.format(ns.action))
     sshin, sshout, ssherr = conn.ssh.exec_command('sudo /etc/init.d/naoqi %s' % ns.action)
     io.format_nao_output(sshout, ns.action)
 
 
-def power_handler(ns):
+def reboot_handler(ns):
     verb = verbose_print(ns.verbose)
-    conn, session = create_connection(ns, verb, ssh=False)
-    verb('power action: {}'.format(ns.action))
-    if ns.action == 'reboot':
-        conn.robot_reboot(session)
-    if ns.action == 'shutdown':
-        conn.robot_shutdown(session)
+    conn = Connection(verb, ssh=False)
+    print('Rebooting ...')
+    conn.robot_reboot()
 
 
-def volume_handler(ns):
+def shutdown_handler(ns):
     verb = verbose_print(ns.verbose)
-    conn, session = create_connection(ns, verb, ssh=False)
-    verb('volume level: {}'.format(ns.level))
-    conn.set_volume(session, ns.level)
+    conn = Connection(verb, ssh=False)
+    print('Shutting down ...')
+    conn.robot_shutdown()
+
+
+def vol_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn = Connection(verb, ssh=False)
+    verb('Volume level: {}'.format(ns.level))
+    target = conn.set_volume(ns.level)
+    print('Setting volume to {}'.format(col.magenta(target)))
+
+
+def wake_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn = Connection(verb, ssh=False)
+    print('Waking up {}'.format(conn.get_robot_name()))
+    conn.wake_up()
+
+
+def rest_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn = Connection(verb, ssh=False)
+    print('Put {} to rest'.format(conn.get_robot_name()))
+    conn.rest()
+
+
+def dialog_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn = Connection(verb, ssh=False)
+    verb('Show dialog window')
+    conn.init_dialog_window()
+
+
+# def ready_screen():
+#     stdscr = curses.initscr()
+#     curses.start_color()
+#     curses.use_default_colors()
+#     curses.noecho()
+#     curses.curs_set(0)
+#     curses.cbreak()  # react instantly to 'q' for example
+#     return stdscr
+
+
+# def close_screen(stdscr):
+#     curses.nocbreak()
+#     stdscr.keypad(0)
+#     curses.curs_set(1)
+#     curses.echo()  # undo everything
+#     curses.endwin()

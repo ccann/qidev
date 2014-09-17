@@ -8,4 +8,5 @@ lib/clio.py
 lib/config.py
 lib/connection.py
 lib/handlers.py
+lib/parser.py
 lib/qidev.py
