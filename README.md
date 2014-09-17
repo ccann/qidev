@@ -6,7 +6,7 @@
 ```sh
 $ cd qidev/
 $ sudo pip install -r requirements.txt
-$ cd qidev-X.X  # where X.X is the version number
+$ cd dist/qidev-X.X  # where X.X is the version number
 $ sudo python setup.py install
 ```
 
