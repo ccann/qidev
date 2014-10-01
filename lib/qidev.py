@@ -1,9 +1,5 @@
 #!/usr/bin/env python
 
-import argparse
-import handlers as hs
-import sys
-
 
 def main():
     parser = argparse.ArgumentParser(description='qidev')
@@ -23,6 +19,8 @@ def main():
                                      help='package and install a project directory on a robot')
     install_parser.add_argument('path', help='path to the project directory to package ' +
                                 'and install', type=str)
+    remove_parser = subs.add_parser('remove',
+                                     help='remove a package from a robot')
 
     show_parser = subs.add_parser('show', help='show the packages installed on a robot')
     mutex = show_parser.add_mutually_exclusive_group()
@@ -70,7 +68,16 @@ def main():
     getattr(hs, handler)(args)
 
 if __name__ == '__main__':
+    import sys
     try:
+        import argparse
+        import handlers as hs
         main()
-    except (KeyboardInterrupt, RuntimeError):
+    except KeyboardInterrupt:
+        sys.exit()
+    except RuntimeError as e:
+        print(e)
+        sys.exit()
+    except ImportError as e:
+        print('Missing Dependency: {}'.format(e))
         sys.exit()

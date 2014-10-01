@@ -7,7 +7,9 @@ import zipfile
 import clio as io
 import config
 from clint.textui import colored as col
+import package_utils as pu
 import socket
+qi.logging.setLevel(0)
 
 
 class Connection():
@@ -15,7 +17,11 @@ class Connection():
 
     def __init__(self, verb, port='9559', username='nao', password='nao',
                  ssh=True, qi_session=True):
-        self.hostname = str(config.read_hostname())
+        try:
+            self.hostname = str(config.read_hostname())
+        except IOError:
+            raise RuntimeError('%s: Connect to a hostname first with "qidev connect"' %
+                               col.red('ERROR'))
         self.verb = verb
         verb('Connect to {}'.format(self.hostname))
         # self.port = int(port)
@@ -65,26 +71,26 @@ class Connection():
         :param pkg_absolute_path: absolute path to the package file.
 
         """
-        pkg_name = pkg_absolute_path.split(os.sep)[-1]
+        pkg = pkg_absolute_path.split(os.sep)[-1]
         if not self.virtual:
-            remote_path = os.path.join(self.install_path, pkg_name)
+            remote_path = os.path.join(self.install_path, pkg)
             # os.system('rsync -a --ignore-existing "{}" nao@{}:{}'.format(pkg_absolute_path,
             #                                                              self.hostname,
             #                                                              remote_path))
             self.scp.put(pkg_absolute_path, remote_path)
-        return pkg_name
+        return pkg
 
     def delete_pkg_file(self, abs_path):
-        """Remove pkg_name from apps/ on robot or abs_path on local machine.
-        :param pkg_name: the name of the package, e.g. my-package.pkg
+        """Remove pkg from apps/ on robot or abs_path on local machine.
+        :param pkg: the name of the package, e.g. my-package.pkg
         :param abs_path: the absolute path of the package on the local machine.
 
         """
-        pkg_name = abs_path.split(os.sep)[-1]
+        pkg = abs_path.split(os.sep)[-1]
         if self.virtual:  # delete the file from the local machine
             os.remove(abs_path)
         else:  # delete the file on teh remote machine
-            remote_path_to_pkg = os.path.join(self.install_path, pkg_name)
+            remote_path_to_pkg = os.path.join(self.install_path, pkg)
             self.sftp = self.ssh.open_sftp()
             self.sftp.remove(remote_path_to_pkg)
             self.sftp.close()
@@ -121,18 +127,30 @@ class Connection():
         :param abs_path: absolute path to the package.
         """
         pacman = self.session.service('PackageManager')
-        pkg_name = abs_path.split(os.sep)[-1]
+        pkg = abs_path.split(os.sep)[-1]
+        pkg_name = pkg.replace('.pkg', '')
+        try:
+            pacman.remove(pkg_name)
+            self.verb('Removed previous package: {}'.format(pkg_name))
+        except RuntimeError:
+            pass
         if self.virtual:
             pacman.install(os.path.join(abs_path))
         else:
-            pacman.install(os.path.join(self.install_path, pkg_name))
+            pacman.install(os.path.join(self.install_path, pkg))
+
+    def remove_package(self, path):
+        pacman = self.session.service('PackageManager')
+        pkg_name = path.split(os.sep)[-1].replace('.pkg', '')
+        try:
+            pacman.remove(pkg_name)
+            self.verb('Removed previous package: {}'.format(pkg_name))
+        except RuntimeError:
+            print('Package {} not found on robot'.format(pkg_name))
 
     def get_installed_package_data(self):
         pacman = self.session.service('PackageManager')
-        try:
-            return pacman.packages2()
-        except AttributeError:
-            return pacman.packages()
+        return pu.get_packages(pacman, 'en_us')
 
     def get_running_behaviors(self):
         behman = self.session.service('ALBehaviorManager')
@@ -226,7 +244,6 @@ class Connection():
         motion.rest()
 
     def init_dialog_window(self):
-        io.show_dialog_header()
         memory = self.session.service('ALMemory')
         dialog = self.session.service('ALDialog')
         wr = memory.subscriber('WordRecognizedAndGrammar')
