@@ -2,7 +2,6 @@ from clint.textui import colored as col
 from clint.textui import puts, indent
 from tabulate import tabulate
 import readline
-import parser
 import sys
 # import curses
 # import urwid
@@ -33,17 +32,14 @@ def completer(text, state):
         return None
 
 
-def show_installed_packages(verb, pkg_data):
+def show_installed_packages(verb, pkgs):
     """Pretty-print a table of installed packages."""
     table = list()
-    for d in pkg_data:
-        behaviors = parser.get_pack_behs(d)
-        n_behaviors = str(len(behaviors)) if behaviors else None
-        services = parser.get_pack_servs(d)
-        n_services = str(len(services)) if services else None
-        name = parser.get_pack_name(d)
-        table.append([bold(name),
-                      d['version'],
+    for p in pkgs:
+        n_behaviors = str(len(p.behaviors)) if p.behaviors else None
+        n_services = str(len(p.services)) if p.services else None
+        table.append([bold(p.name),
+                      p.version,
                       n_behaviors,
                       n_services])
     print ''
@@ -53,28 +49,26 @@ def show_installed_packages(verb, pkg_data):
     print ''
 
 
-def show_installed_services(verb, pkg_data):
+def show_installed_services(verb, pkgs):
     """Pretty-print a table of installed services."""
     table = list()
-    for d in pkg_data:
-        services = parser.get_pack_servs(d)
-        for s in services:
-            name = parser.get_serv_name(s)
-            table.append([bold(name),
-                          (name),
-                          col.green('True') if s['autoRun'] else col.red('False')])
-    print ''
+    for p in pkgs:
+        for s in p.services:
+            table.append([bold(p.name),
+                          s.name,
+                          col.green('True') if s.auto_run else col.red('False')])
+    print('')
     print tabulate(table,
                    headers=['Package Name', 'Service Name', 'Autorun?'],
                    tablefmt='orgtbl')
-    print ''
+    print('')
 
 
-def prompt_for_package(pkg_data):
+def prompt_for_package(pkgs):
     """Prompt the user to specify the package name."""
     global completions
-    pkg_uuids = [p['uuid'] for p in pkg_data]
-    pkg_names = [parser.get_pack_name(p) for p in pkg_data]
+    pkg_uuids = [p.uuid for p in pkgs]
+    pkg_names = [p.name for p in pkgs]
     completions = pkg_uuids + pkg_names
     readline.set_completer_delims('')
     readline.parse_and_bind("tab: complete")
@@ -83,7 +77,7 @@ def prompt_for_package(pkg_data):
         inp = raw_input('Enter package name or UUID (tab to complete)\n> ')
     except KeyboardInterrupt:
         sys.exit()
-    show_package_details(inp, pkg_data)
+    return inp
 
 
 def prompt_for_behavior(behaviors):
@@ -112,10 +106,9 @@ def pretty(o):
 
 def put_behavior_string(b):
     """Print information about a behavior."""
-    name = parser.get_beh_name(b)
-    puts(bold('* {} (behavior)'.format(bold(name))))
+    puts(bold('* {} (behavior)'.format(bold(b.name))))
     with indent(4):
-        nat = b['nature']
+        nat = b.nature
         nature = col.red(nat) if nat == 'interactive' else col.blue(nat)
         puts(pretty('Nature') + nature)
 
@@ -123,38 +116,39 @@ def put_behavior_string(b):
 def put_service_string(s):
     """Print information about a service."""
     try:
-        name = parser.get_serv_name(s)
-        puts(bold('* {} (service)'.format(bold(name))))
+        puts(bold('* {} (service)'.format(bold(s.name))))
         with indent(4):
-            puts(pretty('AutoRun') + 'True' if s['autoRun'] else 'False')
+            puts(pretty('AutoRun') + 'True' if s.auto_run else 'False')
     except KeyError:
         pass
 
 
-def show_package_details(package, pkg_data):
+def show_package_details(package, pkgs):
     """Pretty-print the details of an installed package."""
     print('')
-    for p in pkg_data:
-        name = parser.get_pack_name(p)
-        if name == package or p['uuid'] == package:
-            print('* {} ({})'.format(bold(name),
-                                     col.cyan('v' + p['version'])))
+    for p in pkgs:
+        if p.name == package or p.uuid == package:
+            print('* {} ({})'.format(bold(p.name),
+                                     col.cyan('v' + p.version)))
             with indent(4):
-                puts(pretty('UUID') + p['uuid'])
+                puts(pretty('UUID') + p.uuid)
                 try:
-                    mn, mx = parser.get_naoqi_reqs(p)
+                    mn, mx = p.naoqi_min, p.naoqi_max
+                    if not mn and not mx:
+                        mn = 'unspecified'
+                        mx = ''
                     puts(pretty('NaoQi Requirements') + mn + mx)
                 except IndexError:
                     pass
                 puts(pretty('Supported Languages') +
-                     pretty(parser.get_supported_languages(p)))
+                     pretty(p.supported_langs))
                 try:
-                    puts(pretty('Desciption') + parser.get_description(p))
+                    puts(pretty('Desciption') + p.description)
                 except KeyError:
                     pass
-                for b in parser.get_pack_behs(p):
+                for b in p.behaviors:
                     put_behavior_string(b)
-                for s in parser.get_pack_servs(p):
+                for s in p.services:
                     put_service_string(s)
     print('')
 
@@ -244,10 +238,10 @@ def show_running(behaviors, services, pkg_data):
     # loop.run()
 
 
-def show_dialog_header():
+def show_dialog_header(conn):
     print('')
-    print(' {} ----------------------------------------------- {} '.format(bold('Human'),
-                                                                           bold('Robot')))
+    print('{:^60}'.format(' %s ------------------------------------------------- %s ') %
+          (col.blue('Human'), col.red((conn.get_robot_name()))))
 
 
 # def dialog_separator(value):

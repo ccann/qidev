@@ -1,7 +1,15 @@
 #!/usr/bin/env python
+import sys
+import argparse
 
 
 def main():
+    try:
+        import handlers as hs
+    except ImportError as e:
+        print('Missing Dependency: {}'.format(e))
+        sys.exit()
+
     parser = argparse.ArgumentParser(description='qidev')
     parser.add_argument('--verbose', help='be verbose', dest='verbose',
                         action='store_true', default=False)
@@ -65,19 +73,15 @@ def main():
 
     args = parser.parse_args()
     handler = args.command + '_handler'
+    if not args.verbose:
+        sys.tracebacklimit = 0
     getattr(hs, handler)(args)
 
 if __name__ == '__main__':
-    import sys
     try:
-        import argparse
-        import handlers as hs
         main()
     except KeyboardInterrupt:
         sys.exit()
     except RuntimeError as e:
         print(e)
-        sys.exit()
-    except ImportError as e:
-        print('Missing Dependency: {}'.format(e))
         sys.exit()

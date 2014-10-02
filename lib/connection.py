@@ -150,7 +150,7 @@ class Connection():
 
     def get_installed_package_data(self):
         pacman = self.session.service('PackageManager')
-        return pu.get_packages(pacman, 'en_us')
+        return pu.get_packages(pacman, 'en_US')
 
     def get_running_behaviors(self):
         behman = self.session.service('ALBehaviorManager')

@@ -43,7 +43,7 @@ def install_handler(ns):
 
 def remove_handler(ns):
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb)
+    conn = Connection(verb, ssh=False)
     pkg_data = conn.get_installed_package_data()
     inp = io.prompt_for_package(pkg_data)
     conn.remove_package(inp)
@@ -72,18 +72,18 @@ def show_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     verb('Check installed packages...')
-    pkg_data = conn.get_installed_package_data()
+    pkgs = conn.get_installed_package_data()
     if ns.s:
         verb('Show installed services')
-        io.show_installed_services(verb, pkg_data)
+        io.show_installed_services(verb, pkgs)
     elif ns.i:
-        inp = io.prompt_for_package(pkg_data)
-        io.show_package_details(inp, pkg_data)
+        inp = io.prompt_for_package(pkgs)
+        io.show_package_details(inp, pkgs)
     elif ns.active:
         verb('Show active content')
         io.show_running(conn.get_running_behaviors(),
                         conn.get_running_services(),
-                        pkg_data)
+                        pkgs)
 
         # def refresh_content(value, *args):
         #     behaviors = conn.get_running_behaviors()
@@ -129,7 +129,7 @@ def show_handler(ns):
         #         disconnect()
         #     break
     else:
-        io.show_installed_packages(verb, pkg_data)
+        io.show_installed_packages(verb, pkgs)
 
 
 def start_handler(ns):

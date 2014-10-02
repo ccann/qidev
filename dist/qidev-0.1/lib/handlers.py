@@ -29,6 +29,9 @@ def install_handler(ns):
         conn.install_package(abs_path)
         verb('Clean up: {}'.format(pkg_name))
         conn.delete_pkg_file(abs_path)
+        local_pkg = os.path.join(ns.path, '..', pkg_name)
+        verb('Remove locally: {}'.format(local_pkg))
+        os.remove(local_pkg)
     except IOError:
         if ns.path:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
@@ -36,6 +39,14 @@ def install_handler(ns):
         else:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
                   (col.red('ERROR'), col.blue(os.getcwd())))
+
+
+def remove_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn = Connection(verb, ssh=False)
+    pkg_data = conn.get_installed_package_data()
+    inp = io.prompt_for_package(pkg_data)
+    conn.remove_package(inp)
 
 
 def config_handler(ns):
@@ -61,17 +72,18 @@ def show_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     verb('Check installed packages...')
-    pkg_data = conn.get_installed_package_data()
+    pkgs = conn.get_installed_package_data()
     if ns.s:
         verb('Show installed services')
-        io.show_installed_services(verb, pkg_data)
+        io.show_installed_services(verb, pkgs)
     elif ns.i:
-        io.prompt_for_package(pkg_data)
+        inp = io.prompt_for_package(pkgs)
+        io.show_package_details(inp, pkgs)
     elif ns.active:
         verb('Show active content')
         io.show_running(conn.get_running_behaviors(),
                         conn.get_running_services(),
-                        pkg_data)
+                        pkgs)
 
         # def refresh_content(value, *args):
         #     behaviors = conn.get_running_behaviors()
@@ -117,7 +129,7 @@ def show_handler(ns):
         #         disconnect()
         #     break
     else:
-        io.show_installed_packages(verb, pkg_data)
+        io.show_installed_packages(verb, pkgs)
 
 
 def start_handler(ns):
@@ -225,6 +237,7 @@ def dialog_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     verb('Show dialog window')
+    io.show_dialog_header(conn)
     conn.init_dialog_window()
 
 
