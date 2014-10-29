@@ -15,7 +15,6 @@ def main():
     parser = argparse.ArgumentParser(description='qidev')
     parser.add_argument('--verbose', help='be verbose', dest='verbose',
                         action='store_true', default=False)
-
     subs = parser.add_subparsers(help='commands', dest='command')
 
     config_parser = subs.add_parser('config', help='configure defaults for qidev')
@@ -29,8 +28,7 @@ def main():
                                      help='package and install a project directory on a robot')
     install_parser.add_argument('path', help='path to the project directory to package ' +
                                 'and install', type=str)
-    remove_parser = subs.add_parser('remove',
-                                    help='remove a package from a robot')
+    subs.add_parser('remove', help='remove a package from a robot')
 
     show_parser = subs.add_parser('show', help='show the packages installed on a robot')
     mutex = show_parser.add_mutually_exclusive_group()
@@ -46,15 +44,22 @@ def main():
     start_parser = subs.add_parser('start',
                                    help='focus an activity with ALAutonomousLife; prompts for ' +
                                    'name on return')
+    start_parser.add_argument('--id',
+                              help='manually specify the uuid of the package to start',
+                              dest='name', type=str)
     start_parser.add_argument('-b', '--bm',
                               help='use ALBehaviorManager to start a behavior or service',
                               dest='bm', action='store_true')
+
     stop_parser = subs.add_parser('stop',
                                   help='stop the currently focused activity; prompts for ' +
                                   'name on return')
     stop_parser.add_argument('-b', '--bm',
                              help='use ALBehaviorManager to stop a behavior or service',
                              dest='bm', action='store_true')
+    stop_parser.add_argument('--id',
+                             help='manually specify the uuid of the package to stop',
+                             dest='name', type=str)
 
     life_parser = subs.add_parser('life', help='toggle ALAutonomousLife')
     life_parser.add_argument('state', help='turn ALAutonomousLife on or off', type=str)

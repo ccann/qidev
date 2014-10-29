@@ -6,12 +6,9 @@ from clint.textui import colored as col
 import sys
 import select
 import re
-
 # import curses
 # import functools
 # import urwid
-
-conn = None
 
 
 def verbose_print(flag):
@@ -163,7 +160,9 @@ def start_handler(ns):
     behaviors = conn.get_installed_behaviors()
     if ns.bm:  # use behavior manager
         services = conn.get_declared_services()
-        inp = io.prompt_for_behavior(services + behaviors)
+        inp = ns.name
+        if not ns.name:
+            inp = io.prompt_for_behavior(services + behaviors)
         if inp in services:
             verb('Start service: {}'.format(inp))
             conn.start_service(inp)
@@ -174,7 +173,9 @@ def start_handler(ns):
             print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
                                                                          inp))
     else:  # use autonomous life
-        inp = io.prompt_for_behavior(behaviors)
+        inp = ns.name
+        if not ns.name:
+            inp = io.prompt_for_behavior(behaviors)
         try:
             verb('Switch focus to: {}'.format(inp))
             conn.life_switch_focus(inp)
@@ -300,8 +301,6 @@ def log_handler(ns):
             conn.ssh.close()
             channel.close()
             exit(0)
-
-
 
 
 # def ready_screen():
