@@ -8,7 +8,6 @@ import sys
 # import threading
 # import time
 
-completions = list()
 # palette = [
 #     ('name', 'bold', 'default'),
 #     ('reversed', 'standout', ''),
@@ -24,12 +23,14 @@ def underlined(text):
     return '\033[4m' + text + '\033[0m'
 
 
-def completer(text, state):
-    options = [i for i in completions if i.startswith(text)]
-    if state < len(options):
-        return options[state]
-    else:
-        return None
+def create_completer(completions):
+    def completer(text, state):
+        options = [i for i in completions if i.startswith(text)]
+        if state < len(options):
+            return options[state]
+        else:
+            return None
+    return completer
 
 
 def show_installed_packages(verb, pkgs):
@@ -64,15 +65,11 @@ def show_installed_services(verb, pkgs):
     print('')
 
 
-def prompt_for_package(pkgs):
+def prompt_for_package(pkg_data, completions):
     """Prompt the user to specify the package name."""
-    global completions
-    pkg_uuids = [p.uuid for p in pkgs]
-    pkg_names = [p.name for p in pkgs]
-    completions = pkg_uuids + pkg_names
     readline.set_completer_delims('')
     readline.parse_and_bind("tab: complete")
-    readline.set_completer(completer)
+    readline.set_completer(create_completer(completions))
     try:
         inp = raw_input('Enter package name or UUID (tab to complete)\n> ')
     except KeyboardInterrupt:
@@ -80,13 +77,14 @@ def prompt_for_package(pkgs):
     return inp
 
 
-def prompt_for_behavior(behaviors):
+def prompt_for_behavior(behaviors, completions=None):
     """Prompt the user to specify behavior name."""
-    global completions
-    completions = behaviors
     readline.set_completer_delims('')
     readline.parse_and_bind("tab: complete")
-    readline.set_completer(completer)
+    if not completions:
+        readline.set_completer(create_completer(behaviors))
+    else:
+        readline.set_completer(create_completer(completions))
     try:
         inp = raw_input('Enter package-uuid/behavior-name (tab to complete)\n> ')
     except KeyboardInterrupt:

@@ -3,9 +3,15 @@ import clio as io
 import config
 from connection import Connection
 from clint.textui import colored as col
+import sys
+import select
+import re
+
 # import curses
 # import functools
 # import urwid
+
+conn = None
 
 
 def verbose_print(flag):
@@ -42,22 +48,38 @@ def install_handler(ns):
 
 
 def remove_handler(ns):
+    """Remove a package from the robot."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     pkg_data = conn.get_installed_package_data()
-    inp = io.prompt_for_package(pkg_data)
-    conn.remove_package(inp)
+    completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
+    inp = io.prompt_for_package(pkg_data, completions)
+    # if we matched a package name, replace it with the pkg uuid
+    if inp in [p.name for p in pkg_data]:
+        for pkg in pkg_data:
+            if pkg.name == inp:
+                verb('replace {} with {}'.format(inp, pkg.uuid))
+                inp = pkg.uuid
+                break
+    # if package removal fails or specified package is not installed on the robot
+    if not conn.remove_package(inp) or inp not in completions:
+        print('{}: package {} not installed on {}'.format(col.red('error'),
+                                                          col.blue(inp),
+                                                          col.magenta(conn.get_robot_name())))
+    else:  # package successfully removed
+        print('removed {} from {}'.format(col.blue(inp),
+                                          col.magenta(conn.get_robot_name())))
 
 
 def config_handler(ns):
-    """Configure fields of the .qidev file."""
+    """Configure fields of the ~/.qidev file."""
     verb = verbose_print(ns.verbose)
     field = ns.field.strip()
     if field == 'hostname':
         verb('Set {} to {}'.format(field, ns.value))
         config.write_hostname(ns.value)
     else:
-        print('ERROR: unsupported field {}'.format(field))
+        print('error: unsupported field {}'.format(field))
 
 
 def connect_handler(ns):
@@ -65,25 +87,27 @@ def connect_handler(ns):
     verb = verbose_print(ns.verbose)
     verb('Set hostname to {}'.format(ns.hostname))
     config.write_hostname(ns.hostname)
+    print('connected to {}'.format(col.magenta(ns.hostname)))
 
 
 def show_handler(ns):
-    """Show information about a package, service, active content, etc."""
+    """Display information about a package, service, active content, etc."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     verb('Check installed packages...')
-    pkgs = conn.get_installed_package_data()
+    pkg_data = conn.get_installed_package_data()
     if ns.s:
         verb('Show installed services')
-        io.show_installed_services(verb, pkgs)
+        io.show_installed_services(verb, pkg_data)
     elif ns.i:
-        inp = io.prompt_for_package(pkgs)
-        io.show_package_details(inp, pkgs)
+        completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
+        inp = io.prompt_for_package(pkg_data, completions)
+        io.show_package_details(inp, pkg_data)
     elif ns.active:
         verb('Show active content')
         io.show_running(conn.get_running_behaviors(),
                         conn.get_running_services(),
-                        pkgs)
+                        pkg_data)
 
         # def refresh_content(value, *args):
         #     behaviors = conn.get_running_behaviors()
@@ -129,24 +153,15 @@ def show_handler(ns):
         #         disconnect()
         #     break
     else:
-        io.show_installed_packages(verb, pkgs)
+        io.show_installed_packages(verb, pkg_data)
 
 
 def start_handler(ns):
+    """Focus an activity or start a behavior or service."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     behaviors = conn.get_installed_behaviors()
-    if ns.life:
-        inp = io.prompt_for_behavior(behaviors)
-        try:
-            verb('Switch focus to: {}'.format(inp))
-            conn.life_switch_focus(inp)
-        except RuntimeError:  # this is a huge hack but its not my fault
-            verb('Couldnt find behavior {} so appending "/.": {}'.format(inp, inp+'/.'))
-            inp = inp+'/.'
-            verb('switch focus to: {}'.format(inp))
-            conn.life_switch_focus(inp)
-    else:
+    if ns.bm:  # use behavior manager
         services = conn.get_declared_services()
         inp = io.prompt_for_behavior(services + behaviors)
         if inp in services:
@@ -158,14 +173,23 @@ def start_handler(ns):
         else:
             print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
                                                                          inp))
+    else:  # use autonomous life
+        inp = io.prompt_for_behavior(behaviors)
+        try:
+            verb('Switch focus to: {}'.format(inp))
+            conn.life_switch_focus(inp)
+        except RuntimeError:  # this is a huge hack but its not my fault
+            verb('Couldnt find behavior {} so appending "/.": {}'.format(inp, inp+'/.'))
+            inp = inp+'/.'
+            verb('switch focus to: {}'.format(inp))
+            conn.life_switch_focus(inp)
 
 
 def stop_handler(ns):
+    """Stop the focused activity or use behavior manager to stop a behavior or service."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
-    if ns.life:
-        conn.life_stop_focus()  # stop focused activity
-    else:  # stop behavior/service
+    if ns.bm:  # stop behavior/service
         services = conn.get_running_services()
         behaviors = conn.get_running_behaviors()
         inp = io.prompt_for_behavior(services + behaviors)
@@ -175,21 +199,27 @@ def stop_handler(ns):
             conn.stop_behavior(inp)
         else:
             print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
-                                                                         inp))
+                                                                         col.blue(inp)))
+    else:  # stop the focused activity
+        conn.life_stop_focus()
 
 
 def life_handler(ns):
+    """Toggle ALAutonomousLife on or off."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     if ns.state == 'on':
         conn.life_on()
-    elif ns.state == 'off':
+        print('started autonomous life service')
+    elif ns.state == 'off' or ns.state == 'die':
         conn.life_off()
+        print('stopped autonomous life service')
     else:
-        print('Life state can only be "on" or "off"')
+        print(col.red('error') + ': autonomous life state can only be "on" or "off"')
 
 
 def nao_handler(ns):
+    """Issue a nao command via SSH."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, qi_session=False)
     verb('nao action: {}'.format(ns.action))
@@ -198,6 +228,7 @@ def nao_handler(ns):
 
 
 def reboot_handler(ns):
+    """Reboot the robot."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     print('Rebooting ...')
@@ -205,6 +236,7 @@ def reboot_handler(ns):
 
 
 def shutdown_handler(ns):
+    """Shutdown the robot."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     print('Shutting down ...')
@@ -212,6 +244,7 @@ def shutdown_handler(ns):
 
 
 def vol_handler(ns):
+    """Change the volume of the robot."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     verb('Volume level: {}'.format(ns.level))
@@ -220,6 +253,7 @@ def vol_handler(ns):
 
 
 def wake_handler(ns):
+    """Wake up the robot."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     print('Waking up {}'.format(conn.get_robot_name()))
@@ -227,6 +261,7 @@ def wake_handler(ns):
 
 
 def rest_handler(ns):
+    """Put the robot to rest."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     print('Put {} to rest'.format(conn.get_robot_name()))
@@ -234,11 +269,39 @@ def rest_handler(ns):
 
 
 def dialog_handler(ns):
+    """Show the dialog window."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     verb('Show dialog window')
     io.show_dialog_header(conn)
     conn.init_dialog_window()
+
+
+def log_handler(ns):
+    """Display the naoqi tail logs to the terminal with colors."""
+    verb = verbose_print(ns.verbose)
+    conn = Connection(verb, qi_session=False)
+    transport = conn.ssh.get_transport()
+    channel = transport.open_session()
+    remote_command = 'tail -f /var/log/naoqi/tail-naoqi.log & { read ; kill %1; }'
+    channel.exec_command(remote_command)
+
+    def print_log(s):
+        s = re.sub(r'(\[E\].*)\n', r'\033[0;31m\1\033[0m\n', s)  # turn error red
+        s = re.sub(r'(\[W\].*)\n', r'\033[0;33m\1\033[0m\n', s)  # turn warning yellow
+        sys.stdout.write(s)
+
+    while True:
+        try:
+            rl, wl, xl = select.select([channel], [], [], 0.0)
+            if len(rl) > 0:  # Must be stdout
+                print_log(channel.recv(1024))
+        except KeyboardInterrupt:
+            conn.ssh.close()
+            channel.close()
+            exit(0)
+
+
 
 
 # def ready_screen():

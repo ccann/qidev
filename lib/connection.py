@@ -91,9 +91,9 @@ class Connection():
             os.remove(abs_path)
         else:  # delete the file on teh remote machine
             remote_path_to_pkg = os.path.join(self.install_path, pkg)
-            self.sftp = self.ssh.open_sftp()
-            self.sftp.remove(remote_path_to_pkg)
-            self.sftp.close()
+            sftp = self.ssh.open_sftp()
+            sftp.remove(remote_path_to_pkg)
+            sftp.close()
 
     def get_package_uid(self, path):
         """Get the UUID of the package locatated at path by parsing the manifest.
@@ -124,7 +124,7 @@ class Connection():
 
     def install_package(self, abs_path):
         """Install package on system.
-        :param abs_path: absolute path to the package.
+        abs_path (str): Absolute path of the package.
         """
         pacman = self.session.service('PackageManager')
         pkg = abs_path.split(os.sep)[-1]
@@ -139,18 +139,20 @@ class Connection():
         else:
             pacman.install(os.path.join(self.install_path, pkg))
 
-    def remove_package(self, path):
+    def remove_package(self, uuid):
+        """Remove a package from the robot via PackageManager.
+        uuid (str): uuid of the package to remove
+        """
         pacman = self.session.service('PackageManager')
-        pkg_name = path.split(os.sep)[-1].replace('.pkg', '')
         try:
-            pacman.remove(pkg_name)
-            self.verb('Removed previous package: {}'.format(pkg_name))
+            pacman.remove(uuid)
+            return True
         except RuntimeError:
-            print('Package {} not found on robot'.format(pkg_name))
+            return False
 
     def get_installed_package_data(self):
         pacman = self.session.service('PackageManager')
-        return pu.get_packages(pacman, 'en_US')
+        return pu.get_packages(pacman, 'en_US', verb=self.verb)
 
     def get_running_behaviors(self):
         behman = self.session.service('ALBehaviorManager')
