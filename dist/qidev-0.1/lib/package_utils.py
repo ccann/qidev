@@ -275,17 +275,19 @@ class Service():
         self.exec_start = sdict['execStart']
 
 
-def get_packages(pacman, lang):
+def get_packages(pacman, lang, verb=None):
     """Return the installed packages as a list of package dicts
     :param pacman: the PackageManager service
     :param lang: the language e.g. en_US
     """
     try:
         packs = pacman.packages2()
-        print('Use pacman.packages2')
+        if verb:
+            verb('Use pacman.packages2')
     except AttributeError:
         packs = pacman.packages()
-        print('Use pacman.packages')
+        if verb:
+            verb('Use pacman.packages')
     return [Package(d, lang) for d in packs]
 
 
