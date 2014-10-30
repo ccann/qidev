@@ -83,6 +83,9 @@ def main():
     dialog_parser = subs.add_parser('dialog', help='show dialog')
 
     log_parser = subs.add_parser('log', help='show tail-naoqi.log')
+    log_parser.add_argument('--cp', '--copy',
+                            help='copy naoqi-tail.log to local machine; configure log_path to ' +
+                            'change where this file is written.', action='store_true', dest='cp')
 
     args = parser.parse_args()
     handler = args.command + '_handler'

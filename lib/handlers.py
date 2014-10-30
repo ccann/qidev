@@ -6,6 +6,7 @@ from clint.textui import colored as col
 import sys
 import select
 import re
+
 # import curses
 # import functools
 # import urwid
@@ -38,10 +39,10 @@ def install_handler(ns):
     except IOError:
         if ns.path:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
-                  (col.red('ERROR'), col.blue(ns.path)))
+                  (col.red('error'), col.blue(ns.path)))
         else:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
-                  (col.red('ERROR'), col.blue(os.getcwd())))
+                  (col.red('error'), col.blue(os.getcwd())))
 
 
 def remove_handler(ns):
@@ -71,19 +72,15 @@ def remove_handler(ns):
 def config_handler(ns):
     """Configure fields of the ~/.qidev file."""
     verb = verbose_print(ns.verbose)
-    field = ns.field.strip()
-    if field == 'hostname':
-        verb('Set {} to {}'.format(field, ns.value))
-        config.write_hostname(ns.value)
-    else:
-        print('error: unsupported field {}'.format(field))
+    config.write_field(ns.field.strip(), ns.value.strip())
+    verb('Set {} to {}'.format(ns.field.strip(), ns.value.strip()))
 
 
 def connect_handler(ns):
     """Change hostname field of the .qidev file."""
     verb = verbose_print(ns.verbose)
     verb('Set hostname to {}'.format(ns.hostname))
-    config.write_hostname(ns.hostname)
+    config.write_field('hostname', ns.hostname)
     print('connected to {}'.format(col.magenta(ns.hostname)))
 
 
@@ -170,7 +167,7 @@ def start_handler(ns):
             verb('Start behavior: {}'.format(inp))
             conn.start_behavior(inp)
         else:
-            print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
+            print('{}: {} is not an eligible behavior or service'.format(col.red('error'),
                                                                          inp))
     else:  # use autonomous life
         inp = ns.name
@@ -199,7 +196,7 @@ def stop_handler(ns):
         elif inp in behaviors:
             conn.stop_behavior(inp)
         else:
-            print('{}: {} is not an eligible behavior or service'.format(col.red('ERROR'),
+            print('{}: {} is not an eligible behavior or service'.format(col.red('error'),
                                                                          col.blue(inp)))
     else:  # stop the focused activity
         conn.life_stop_focus()
@@ -281,26 +278,34 @@ def dialog_handler(ns):
 def log_handler(ns):
     """Display the naoqi tail logs to the terminal with colors."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb, qi_session=False)
-    transport = conn.ssh.get_transport()
-    channel = transport.open_session()
-    remote_command = 'tail -f /var/log/naoqi/tail-naoqi.log & { read ; kill %1; }'
-    channel.exec_command(remote_command)
-
-    def print_log(s):
-        s = re.sub(r'(\[E\].*)\n', r'\033[0;31m\1\033[0m\n', s)  # turn error red
-        s = re.sub(r'(\[W\].*)\n', r'\033[0;33m\1\033[0m\n', s)  # turn warning yellow
-        sys.stdout.write(s)
-
-    while True:
+    conn = Connection(verb)
+    p = '/var/log/naoqi/tail-naoqi.log'
+    if ns.cp:
         try:
-            rl, wl, xl = select.select([channel], [], [], 0.0)
-            if len(rl) > 0:  # Must be stdout
-                print_log(channel.recv(1024))
-        except KeyboardInterrupt:
-            conn.ssh.close()
-            channel.close()
-            exit(0)
+            conn.remote_get(p, os.path.expanduser(config.read_field('log_path')))
+        except RuntimeError:
+            print(col.red('error') + ': tail-naoqi.log not found on ' +
+                  col.magenta(conn.get_robot_name()))
+    else:
+        transport = conn.ssh.get_transport()
+        channel = transport.open_session()
+        remote_command = 'tail -f ' + p + ' & { read ; kill %1; }'
+        channel.exec_command(remote_command)
+
+        def print_log(s):
+            s = re.sub(r'(\[E\].*)\n', r'\033[0;31m\1\033[0m\n', s)  # turn error red
+            s = re.sub(r'(\[W\].*)\n', r'\033[0;33m\1\033[0m\n', s)  # turn warning yellow
+            sys.stdout.write(s)
+
+        while True:
+            try:
+                rl, wl, xl = select.select([channel], [], [], 0.0)
+                if len(rl) > 0:  # Must be stdout
+                    print_log(channel.recv(1024))
+            except KeyboardInterrupt:
+                conn.ssh.close()
+                channel.close()
+                exit(0)
 
 
 # def ready_screen():

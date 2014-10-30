@@ -1,7 +1,7 @@
 import qi
 import os
 import paramiko
-from scp import SCPClient
+from scp import SCPClient, SCPException
 import xml.etree.ElementTree as ET
 import zipfile
 import clio as io
@@ -18,7 +18,7 @@ class Connection():
     def __init__(self, verb, port='9559', username='nao', password='nao',
                  ssh=True, qi_session=True):
         try:
-            self.hostname = str(config.read_hostname())
+            self.hostname = str(config.read_field('hostname'))
         except IOError:
             raise RuntimeError('%s: Connect to a hostname first with "qidev connect"' %
                                col.red('ERROR'))
@@ -79,6 +79,13 @@ class Connection():
             #                                                              remote_path))
             self.scp.put(pkg_absolute_path, remote_path)
         return pkg
+
+    def remote_get(self, file_absolute_path, local_path=None):
+        """Grab a file from the remote host."""
+        try:
+            self.scp.get(file_absolute_path, local_path=local_path)
+        except SCPException:
+            raise RuntimeError
 
     def delete_pkg_file(self, abs_path):
         """Remove pkg from apps/ on robot or abs_path on local machine.
