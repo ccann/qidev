@@ -21,14 +21,11 @@ def write_field(field, value):
     """Write field value pair to .qidev json file."""
     if not os.path.exists(path):
         with open(path, 'w+') as json_file:
-            print 'file was created!'
             data = {field: value}
             json.dump(data, json_file)
     else:
         with open(path, 'r') as json_file:
             data = json.load(json_file)
-            print 'read '.format(data)
         with open(path, 'w+') as json_file:
             data[field] = value
-            print data
             json.dump(data, json_file)

@@ -71,9 +71,9 @@ def remove_handler(ns):
 
 def config_handler(ns):
     """Configure fields of the ~/.qidev file."""
-    verb = verbose_print(ns.verbose)
     config.write_field(ns.field.strip(), ns.value.strip())
-    verb('Set {} to {}'.format(ns.field.strip(), ns.value.strip()))
+    print('set {} to {}'.format(col.blue(ns.field.strip()),
+                                col.blue(ns.value.strip())))
 
 
 def connect_handler(ns):
@@ -282,7 +282,12 @@ def log_handler(ns):
     p = '/var/log/naoqi/tail-naoqi.log'
     if ns.cp:
         try:
-            conn.remote_get(p, os.path.expanduser(config.read_field('log_path')))
+            lp = config.read_field('log_path')
+            if not lp:
+                lp = '~'
+            conn.remote_get(p, os.path.expanduser(lp))
+            print('secure copied logs to ' +
+                  col.blue(os.path.join(os.path.expanduser(lp), 'tail-naoqi.log')))
         except RuntimeError:
             print(col.red('error') + ': tail-naoqi.log not found on ' +
                   col.magenta(conn.get_robot_name()))
