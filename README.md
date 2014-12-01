@@ -33,10 +33,10 @@ $ qidev connect Michelangelo.local
 ## Installing a package
 Provide the path to a directory containing a project manifest.
 ```sh
-$ cd /path/to/my/project/ 
+$ cd /path/to/my/project
 $ qidev install .
 # alternatively...
-$ qidev install /path/to/my/project/
+$ qidev install /path/to/my/project
 ```
 
 ## Showing content
