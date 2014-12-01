@@ -6,6 +6,8 @@ from clint.textui import colored as col
 import sys
 import select
 import re
+import threading
+
 
 # import curses
 # import functools
@@ -36,6 +38,9 @@ def install_handler(ns):
         local_pkg = os.path.join(ns.path, '..', pkg_name)
         verb('Remove locally: {}'.format(local_pkg))
         os.remove(local_pkg)
+        print('installed {} on {}'.
+              format(col.blue(pkg_name).replace('.pkg', ''),
+                     col.magenta(conn.get_robot_name())))
     except IOError:
         if ns.path:
             print('%s: %s is not a project directory (does not contain manifest.xml)' %
@@ -81,7 +86,8 @@ def connect_handler(ns):
     verb = verbose_print(ns.verbose)
     verb('Set hostname to {}'.format(ns.hostname))
     config.write_field('hostname', ns.hostname)
-    print('connected to {}'.format(col.magenta(ns.hostname)))
+    print('set {} to {}'.format(col.blue('hostname'),
+                                col.magenta(ns.hostname)))
 
 
 def show_handler(ns):
@@ -221,6 +227,9 @@ def nao_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, qi_session=False)
     verb('nao action: {}'.format(ns.action))
+    print('{} naoqi on {}'.
+          format(ns.action,
+                 col.magenta(config.read_field('hostname').replace('.local', ''))))
     sshin, sshout, ssherr = conn.ssh.exec_command('sudo /etc/init.d/naoqi %s' % ns.action)
     io.format_nao_output(sshout, ns.action)
 
@@ -298,8 +307,8 @@ def log_handler(ns):
         channel.exec_command(remote_command)
 
         def print_log(s):
-            s = re.sub(r'(\[E\].*)\n', r'\033[0;31m\1\033[0m\n', s)  # turn error red
-            s = re.sub(r'(\[W\].*)\n', r'\033[0;33m\1\033[0m\n', s)  # turn warning yellow
+            s = re.sub(r'(\[E\].*)\n', r'\033[0;31m\1\033[0m\n', s)  # error red
+            s = re.sub(r'(\[W\].*)\n', r'\033[0;33m\1\033[0m\n', s)  # warning yellow
             sys.stdout.write(s)
 
         while True:
@@ -308,8 +317,16 @@ def log_handler(ns):
                 if len(rl) > 0:  # Must be stdout
                     print_log(channel.recv(1024))
             except KeyboardInterrupt:
-                conn.ssh.close()
-                channel.close()
+                try:
+                    t = threading.Thread(target=conn.ssh.close)
+                    t.start()
+                except KeyboardInterrupt:
+                    pass  # I'm not sure why / if this is necessary
+                try:
+                    t = threading.Thread(target=channel.close)
+                    t.start()
+                except KeyboardInterrupt:
+                    pass  # I'm not sure why / if this is necessary
                 exit(0)
 
 
