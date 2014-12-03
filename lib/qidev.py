@@ -28,7 +28,12 @@ def main():
                                      help='package and install a project directory on a robot')
     install_parser.add_argument('path', help='path to the project directory to package ' +
                                 'and install', type=str)
-    subs.add_parser('remove', help='remove a package from a robot')
+    install_parser.add_argument('--ip', nargs='*', type=str, dest='multi',
+                                help='specify multiple hostnames or IP addresses')
+
+    remove_parser = subs.add_parser('remove', help='remove a package from a robot')
+    remove_parser.add_argument('--ip', nargs='*', type=str, dest='multi',
+                               help='specify multiple hostnames or IP addresses')
 
     show_parser = subs.add_parser('show', help='show the packages installed on a robot')
     mutex = show_parser.add_mutually_exclusive_group()
