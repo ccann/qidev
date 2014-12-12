@@ -25,53 +25,78 @@ def verbose_print(flag):
 def install_handler(ns):
     """Install a package to a remote host or locally."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb)
-    try:
-        verb('Create package from directory: {}'.format(ns.path))
-        abs_path = conn.create_package(ns.path)
-        verb('Transfer package to {}'.format(conn.hostname))
-        pkg_name = conn.transfer(abs_path)
-        verb('Install package: {}'.format(pkg_name))
-        conn.install_package(abs_path)
-        verb('Clean up: {}'.format(pkg_name))
-        conn.delete_pkg_file(abs_path)
-        local_pkg = os.path.join(ns.path, '..', pkg_name)
-        verb('Remove locally: {}'.format(local_pkg))
-        os.remove(local_pkg)
-        print('installed {} on {}'.
-              format(col.blue(pkg_name).replace('.pkg', ''),
-                     col.magenta(conn.get_robot_name())))
-    except IOError:
-        if ns.path:
-            print('%s: %s is not a project directory (does not contain manifest.xml)' %
-                  (col.red('error'), col.blue(ns.path)))
-        else:
-            print('%s: %s is not a project directory (does not contain manifest.xml)' %
-                  (col.red('error'), col.blue(os.getcwd())))
+
+    def install(conn):
+        try:
+            verb('Create package from directory: {}'.format(ns.path))
+            abs_path = conn.create_package(ns.path)
+            verb('Transfer package to {}'.format(conn.hostname))
+            pkg_name = conn.transfer(abs_path)
+            verb('Install package: {}'.format(pkg_name))
+            conn.install_package(abs_path)
+            verb('Clean up: {}'.format(pkg_name))
+            conn.delete_pkg_file(abs_path)
+            local_pkg = os.path.join(ns.path, '..', pkg_name)
+            verb('Remove locally: {}'.format(local_pkg))
+            os.remove(local_pkg)
+            print('installed {} on {}'.
+                  format(col.blue(pkg_name).replace('.pkg', ''),
+                         col.magenta(conn.get_robot_name())))
+        except IOError:
+            if ns.path:
+                print('%s: %s is not a project directory (does not contain manifest.xml)' %
+                      (col.red('error'), col.blue(ns.path)))
+            else:
+                print('%s: %s is not a project directory (does not contain manifest.xml)' %
+                      (col.red('error'), col.blue(os.getcwd())))
+
+    if ns.multi:
+        for conn in [Connection(verb, hostname=ip) for ip in ns.multi]:
+            install(conn)
+    else:
+        install(Connection(verb))
 
 
 def remove_handler(ns):
     """Remove a package from the robot."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb, ssh=False)
-    pkg_data = conn.get_installed_package_data()
-    completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
-    inp = io.prompt_for_package(pkg_data, completions)
-    # if we matched a package name, replace it with the pkg uuid
-    if inp in [p.name for p in pkg_data]:
-        for pkg in pkg_data:
-            if pkg.name == inp:
-                verb('replace {} with {}'.format(inp, pkg.uuid))
-                inp = pkg.uuid
-                break
-    # if package removal fails or specified package is not installed on the robot
-    if not conn.remove_package(inp) or inp not in completions:
-        print('{}: package {} not installed on {}'.format(col.red('error'),
-                                                          col.blue(inp),
-                                                          col.magenta(conn.get_robot_name())))
-    else:  # package successfully removed
-        print('removed {} from {}'.format(col.blue(inp),
-                                          col.magenta(conn.get_robot_name())))
+
+    def get_completions(conn):
+        pkg_data = conn.get_installed_package_data()
+        completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
+        return completions
+
+    def remove(conn, inp):
+        # if we matched a package name, replace it with the pkg uuid
+        pkg_data = conn.get_installed_package_data()
+        if inp in [p.name for p in pkg_data]:
+            for pkg in pkg_data:
+                if pkg.name == inp:
+                    verb('replace {} with {}'.format(inp, pkg.uuid))
+                    inp = pkg.uuid
+                    break
+        # if package removal fails or specified package is not installed on the robot
+        if not conn.remove_package(inp) or inp not in completions:
+            print('{}: package {} not installed on {}'.format(col.red('error'),
+                                                              col.blue(inp),
+                                                              col.magenta(conn.get_robot_name())))
+        else:  # package successfully removed
+            print('removed {} from {}'.format(col.blue(inp),
+                                              col.magenta(conn.get_robot_name())))
+
+    if ns.multi:
+        conns = [Connection(verb, ssh=False, hostname=ip) for ip in ns.multi]
+        completions = set()
+        for conn in conns:
+            completions.update(get_completions(conn))
+        inp = io.prompt_for_package(list(completions))
+        for conn in conns:
+            remove(conn, inp)
+    else:
+        conn = Connection(verb, ssh=False)
+        completions = get_completions(conn)
+        inp = io.prompt_for_package(completions)
+        remove(conn, inp)
 
 
 def config_handler(ns):
@@ -101,7 +126,7 @@ def show_handler(ns):
         io.show_installed_services(verb, pkg_data)
     elif ns.i:
         completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
-        inp = io.prompt_for_package(pkg_data, completions)
+        inp = io.prompt_for_package(completions)
         io.show_package_details(inp, pkg_data)
     elif ns.active:
         verb('Show active content')

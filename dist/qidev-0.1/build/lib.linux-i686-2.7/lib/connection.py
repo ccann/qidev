@@ -15,14 +15,17 @@ qi.logging.setLevel(0)
 class Connection():
     """Establish a connection to hostname and a qi self.session."""
 
-    def __init__(self, verb, port='9559', username='nao', password='nao',
+    def __init__(self, verb, hostname=None, port='9559', username='nao', password='nao',
                  ssh=True, qi_session=True):
-        try:
-            self.hostname = str(config.read_field('hostname'))
-        except IOError:
-            raise RuntimeError('%s: Connect to a hostname first with "qidev connect"' %
-                               col.red('ERROR'))
         self.verb = verb
+        self.hostname = hostname
+        if not hostname:
+            try:
+                self.hostname = str(config.read_field('hostname'))
+            except IOError:
+                raise RuntimeError('%s: Connect to a hostname first with "qidev connect"' %
+                                   col.red('ERROR'))
+
         verb('Connect to {}'.format(self.hostname))
         # self.port = int(port)
         self.user = username
@@ -152,7 +155,7 @@ class Connection():
         """
         pacman = self.session.service('PackageManager')
         try:
-            pacman.remove(uuid)
+            pacman.removePkg(uuid)
             return True
         except RuntimeError:
             return False

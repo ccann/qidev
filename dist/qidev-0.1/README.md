@@ -22,7 +22,8 @@ to test, open a terminal and type:
 $ qidev --help
 ``` 
 
-## Connecting to a robot
+## Configuring robot address
+Set the 'hostname' field in ~/.qidev to the IP address or hostname of the robot. Doing so points all future qidev commands to that address.
 ```sh
 $ qidev config hostname Michelangelo.local
 # shortcut...
@@ -30,30 +31,32 @@ $ qidev connect Michelangelo.local
 ```
 
 ## Installing a package
+Provide the path to a directory containing a project manifest.
 ```sh
-$ qidev install --help
-$ cd /path/to/my/project/ 
+$ cd /path/to/my/project
 $ qidev install .
-$ qidev install /path/to/my/project/  # alternatively
+# alternatively...
+$ qidev install /path/to/my/project
 ```
 
 ## Showing content
 ```sh
 $ qidev show  # see all packages installed
-$ qidev show -s  # see all services installed
-$ qidev show -a  # see all active content
-$ qidev show -i  # inspect a package for details
+$ qidev show -s  # see all services installed (-s, --services)
+$ qidev show -a  # see all active content (-a, --active)
+$ qidev show -i  # inspect a package for details (-i, -p, --inspect, --package)
 ```
-return prompts for package name with tab completion for package inpection
+Return key prompts for package name with tab completion for package inpection.
 
 ## Starting and stopping behaviors and services
 ```sh
-$ qidev start  # (re)start a behavior or service
-$ qidev stop  # stop a behavior or service
-$ qidev start -l  # switch focus to an activity
-$ qidev stop -l  # stop focused activity
+$ qidev start  # switch focus to an activity
+$ qidev stop  # stop focused activity
+$ qidev start -b  # (re)start a behavior or service (-b, --bm)
+$ qidev stop -b  # stop a behavior or service (-b, --bm)
+$ qidev start --id my-package-uuid  # specify package id, skip prompt
 ```
-return prompts for behavior/service name with tab-completion in all cases
+Return key prompts for behavior/service name with tab-completion in all cases
 
 ## Autonomous Life Management
 ```sh
@@ -89,8 +92,15 @@ $ qidev vol up  # increase volume by 10
 $ qidev vol down  # decrease volume by 10
 ```
 
-## Dialog
+## Log Viewing
+```sh
+$ qidev log  # follow tail-naoqi.log on remote host
+$ qidev log --cp  # copy tail-naoqi.log to local machine (--cp, --copy)
+$ qidev config log_path /where/I/want/tail-naoqi.log/written  # '~' by default
+```
+
+## Dialog (work in progress)
 ```sh
 $ qidev dialog  # show dialog window
 ```
-Type to force input to the robot.
+Type to force input to the robot.  

@@ -65,7 +65,7 @@ def show_installed_services(verb, pkgs):
     print('')
 
 
-def prompt_for_package(pkg_data, completions):
+def prompt_for_package(completions):
     """Prompt the user to specify the package name."""
     readline.set_completer_delims('')
     readline.parse_and_bind("tab: complete")
