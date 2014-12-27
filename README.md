@@ -47,11 +47,7 @@ $ qidev install /path/to/my/project --ip Michelangelo.local Donatello.local Raph
 Remove an installed package from the robot.
 ```sh
 $ qidev remove
-```
-Return key prompts for package name or UUID with tab-completion.
-
-### Remove a package from multiple robots
-```sh
+# from multiple robots...
 $ qidev remove --ip Michelangelo.local Donatello.local Raphael.local Leonardo.local
 ```
 Return key prompts for package name or UUID with tab-completion. The set of eligible packages is the union of packages installed on all targeted robots. If the package selected for removal is not installed on one of the specified targets, it's just skipped.
