@@ -64,10 +64,10 @@ Return key prompts for package name with tab-completion for package inpection.
 
 ## Starting and stopping behaviors and services
 ```sh
-$ qidev start  # switch focus to an activity (with AutonomousLife)
-$ qidev stop  # stop focused activity (with AutonomousLife)
+$ qidev start     # switch focus to an activity (with AutonomousLife)
+$ qidev stop      # stop focused activity (with AutonomousLife)
 $ qidev start -b  # (re)start a behavior or service (-b, --bm)
-$ qidev stop -b  # stop a behavior or service (-b, --bm)
+$ qidev stop -b   # stop a behavior or service (-b, --bm)
 $ qidev start --id my-package-uuid  # specify package id, skip prompt
 ```
 Return key prompts for behavior/service name with tab-completion in all cases
