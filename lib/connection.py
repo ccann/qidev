@@ -13,21 +13,19 @@ qi.logging.setLevel(0)
 
 
 class Connection():
-    """Establish a connection to hostname and a qi self.session."""
+    """Establish a connection to hostname and a qi session."""
 
     def __init__(self, verb, hostname=None, port='9559', username='nao', password='nao',
                  ssh=True, qi_session=True):
         self.verb = verb
-        self.hostname = hostname
         if not hostname:
             try:
                 self.hostname = str(config.read_field('hostname'))
             except IOError:
                 raise RuntimeError('%s: Connect to a hostname first with "qidev connect"' %
                                    col.red('ERROR'))
-
         verb('Connect to {}'.format(self.hostname))
-        # self.port = int(port)
+        self.robot = self.hostname.replace('.local', '')
         self.user = username
         self.pw = password
         self.virtual = False
@@ -62,17 +60,12 @@ class Connection():
             except socket.error as e:
                 verb('Virtual robot detected')
                 self.virtual = True  # assuming this is a virtual bot... kind of a hack?
-        if self.virtual:
-            self.install_path = os.path.expanduser('~')
-        else:
-            self.install_path = '/home/nao/'  # always linux
-        self.install_path = os.path.join(self.install_path,
-                                         '.local', 'share', 'PackageManager', 'apps')
+        self.install_path = os.path.join(os.path.expanduser('~'), '.local',
+                                         'share', 'PackageManager', 'apps')
 
     def transfer(self, pkg_absolute_path):
-        """Transfer the package file at pkg_absolute_path onto the remote filesystem.
-        :param pkg_absolute_path: absolute path to the package file.
-
+        """Transfer the package to the remote filesystem.
+        :param pkg_absolute_path: absolute path of the .pkg file.
         """
         pkg = pkg_absolute_path.split(os.sep)[-1]
         if not self.virtual:
@@ -94,12 +87,11 @@ class Connection():
         """Remove pkg from apps/ on robot or abs_path on local machine.
         :param pkg: the name of the package, e.g. my-package.pkg
         :param abs_path: the absolute path of the package on the local machine.
-
         """
         pkg = abs_path.split(os.sep)[-1]
         if self.virtual:  # delete the file from the local machine
             os.remove(abs_path)
-        else:  # delete the file on teh remote machine
+        else:  # delete the file on the remote machine
             remote_path_to_pkg = os.path.join(self.install_path, pkg)
             sftp = self.ssh.open_sftp()
             sftp.remove(remote_path_to_pkg)
@@ -134,7 +126,7 @@ class Connection():
 
     def install_package(self, abs_path):
         """Install package on system.
-        abs_path (str): Absolute path of the package.
+        abs_path (str): absolute path to the package.
         """
         pacman = self.session.service('PackageManager')
         pkg = abs_path.split(os.sep)[-1]

@@ -7,8 +7,6 @@ import sys
 import select
 import re
 import threading
-
-
 # import curses
 # import functools
 # import urwid
@@ -252,9 +250,7 @@ def nao_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, qi_session=False)
     verb('nao action: {}'.format(ns.action))
-    print('{} naoqi on {}'.
-          format(ns.action,
-                 col.magenta(config.read_field('hostname').replace('.local', ''))))
+    print('{} naoqi on {}'.format(ns.action, col.magenta(conn.robot)))
     sshin, sshout, ssherr = conn.ssh.exec_command('sudo /etc/init.d/naoqi %s' % ns.action)
     io.format_nao_output(sshout, ns.action)
 
