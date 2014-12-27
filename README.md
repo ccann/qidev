@@ -25,6 +25,7 @@ $ qidev --help
 Set the 'hostname' field in ~/.qidev to the IP address or hostname of the robot. Doing so points all future qidev commands to that address.
 ```sh
 $ qidev config hostname Michelangelo.local
+
 # shortcut...
 $ qidev connect Michelangelo.local
 ```
@@ -34,12 +35,11 @@ Point qidev to your application folder (containing the manifest.xml), package yo
 ```sh
 $ cd /path/to/my/project
 $ qidev install .
+
 # alternatively...
 $ qidev install /path/to/my/project
-```
 
-### Install a package on multiple robots
-```sh
+# install on multiple robots
 $ qidev install /path/to/my/project --ip Michelangelo.local Donatello.local Raphael.local Leonardo.local
 ```
 
@@ -47,6 +47,7 @@ $ qidev install /path/to/my/project --ip Michelangelo.local Donatello.local Raph
 Remove an installed package from the robot.
 ```sh
 $ qidev remove
+
 # from multiple robots...
 $ qidev remove --ip Michelangelo.local Donatello.local Raphael.local Leonardo.local
 ```
