@@ -6,7 +6,8 @@ from clint.textui import colored as col
 import sys
 import select
 import re
-import threading
+# import threading
+# import socket
 # import curses
 # import functools
 # import urwid
@@ -42,10 +43,10 @@ def install_handler(ns):
                          col.magenta(conn.get_robot_name())))
         except IOError:
             if ns.path:
-                print('%s: %s is not a project directory (does not contain manifest.xml)' %
+                print('%log: %log is not a project directory (does not contain manifest.xml)' %
                       (col.red('error'), col.blue(ns.path)))
             else:
-                print('%s: %s is not a project directory (does not contain manifest.xml)' %
+                print('%log: %log is not a project directory (does not contain manifest.xml)' %
                       (col.red('error'), col.blue(os.getcwd())))
 
     if ns.multi:
@@ -119,7 +120,7 @@ def show_handler(ns):
     conn = Connection(verb, ssh=False)
     verb('Check installed packages...')
     pkg_data = conn.get_installed_package_data()
-    if ns.s:
+    if ns.log:
         verb('Show installed services')
         io.show_installed_services(verb, pkg_data)
     elif ns.i:
@@ -186,9 +187,7 @@ def start_handler(ns):
     behaviors = conn.get_installed_behaviors()
     if ns.bm:  # use behavior manager
         services = conn.get_declared_services()
-        inp = ns.name
-        if not ns.name:
-            inp = io.prompt_for_behavior(services + behaviors)
+        inp = ns.name if ns.name else io.prompt_for_behavior(services + behaviors)
         if inp in services:
             verb('Start service: {}'.format(inp))
             conn.start_service(inp)
@@ -196,17 +195,15 @@ def start_handler(ns):
             verb('Start behavior: {}'.format(inp))
             conn.start_behavior(inp)
         else:
-            print('{}: {} is not an eligible behavior or service'.format(col.red('error'),
-                                                                         inp))
+            print('{}: {} is not an eligible behavior or service'.
+                  format(col.red('error'), inp))
     else:  # use autonomous life
-        inp = ns.name
-        if not ns.name:
-            inp = io.prompt_for_behavior(behaviors)
+        inp = ns.name if ns.name else io.prompt_for_behavior(behaviors)
         try:
             verb('Switch focus to: {}'.format(inp))
             conn.life_switch_focus(inp)
-        except RuntimeError:  # this is a huge hack but its not my fault
-            verb('Couldnt find behavior {} so appending "/.": {}'.format(inp, inp+'/.'))
+        except RuntimeError:  # this is a wart but it'log not my fault
+            verb('Couldnt find behavior {} so appending "/.": {}'.format(inp, inp + '/.'))
             inp = inp+'/.'
             verb('switch focus to: {}'.format(inp))
             conn.life_switch_focus(inp)
@@ -225,14 +222,14 @@ def stop_handler(ns):
         elif inp in behaviors:
             conn.stop_behavior(inp)
         else:
-            print('{}: {} is not an eligible behavior or service'.format(col.red('error'),
-                                                                         col.blue(inp)))
+            print('{}: {} is not an eligible behavior or service'.
+                  format(col.red('error'), col.blue(inp)))
     else:  # stop the focused activity
         conn.life_stop_focus()
 
 
 def life_handler(ns):
-    """Toggle ALAutonomousLife on or off."""
+    """Toggle Autonomous Life ON or OFF."""
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     if ns.state == 'on':
@@ -250,8 +247,8 @@ def nao_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, qi_session=False)
     verb('nao action: {}'.format(ns.action))
-    print('{} naoqi on {}'.format(ns.action, col.magenta(conn.robot)))
-    sshin, sshout, ssherr = conn.ssh.exec_command('sudo /etc/init.d/naoqi %s' % ns.action)
+    print('{} naoqi on {}'.format(ns.action, col.magenta(conn.get_robot_name())))
+    sshin, sshout, ssherr = conn.ssh.exec_command('sudo /etc/init.d/naoqi %log' % ns.action)
     io.format_nao_output(sshout, ns.action)
 
 
@@ -315,9 +312,10 @@ def log_handler(ns):
             lp = config.read_field('log_path')
             if not lp:
                 lp = '~'
-            conn.remote_get(p, os.path.expanduser(lp))
+            log_path = os.path.expanduser(lp)
+            conn.remote_get(p, log_path)
             print('secure copied logs to ' +
-                  col.blue(os.path.join(os.path.expanduser(lp), 'tail-naoqi.log')))
+                  col.blue(os.path.join(log_path, 'tail-naoqi.log')))
         except RuntimeError:
             print(col.red('error') + ': tail-naoqi.log not found on ' +
                   col.magenta(conn.get_robot_name()))
@@ -327,29 +325,24 @@ def log_handler(ns):
         remote_command = 'tail -f ' + p + ' & { read ; kill %1; }'
         channel.exec_command(remote_command)
 
-        def print_log(s):
-            s = re.sub(r'(\[E\].*)\n', r'\033[0;31m\1\033[0m\n', s)  # error red
-            s = re.sub(r'(\[W\].*)\n', r'\033[0;33m\1\033[0m\n', s)  # warning yellow
-            sys.stdout.write(s)
+        def print_log(log):
+            log = re.sub(r'(\[E\].*)\n', r'\033[0;31m\1\033[0m\n', log)  # error red
+            log = re.sub(r'(\[W\].*)\n', r'\033[0;33m\1\033[0m\n', log)  # warning yellow
+            sys.stdout.write(log)
 
         while True:
             try:
                 rl, wl, xl = select.select([channel], [], [], 0.0)
                 if len(rl) > 0:  # Must be stdout
                     print_log(channel.recv(1024))
-            except KeyboardInterrupt:
+            except:
                 try:
-                    t = threading.Thread(target=conn.ssh.close)
-                    t.start()
-                except KeyboardInterrupt:
-                    pass  # I'm not sure why / if this is necessary
-                try:
-                    t = threading.Thread(target=channel.close)
-                    t.start()
-                except KeyboardInterrupt:
-                    pass  # I'm not sure why / if this is necessary
-                exit(0)
-
+                    print('close the SSH Client')
+                    conn.ssh.close()
+                except Exception as e:
+                    print('exception when closing SSH Client: {}'.format(e))
+                finally:
+                    break
 
 # def ready_screen():
 #     stdscr = curses.initscr()

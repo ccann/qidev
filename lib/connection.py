@@ -25,7 +25,6 @@ class Connection():
                 raise RuntimeError('%s: Connect to a hostname first with "qidev connect"' %
                                    col.red('ERROR'))
         verb('Connect to {}'.format(self.hostname))
-        self.robot = self.hostname.replace('.local', '')
         self.user = username
         self.pw = password
         self.virtual = False
