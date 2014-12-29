@@ -120,10 +120,10 @@ def show_handler(ns):
     conn = Connection(verb, ssh=False)
     verb('Check installed packages...')
     pkg_data = conn.get_installed_package_data()
-    if ns.log:
+    if ns.services:
         verb('Show installed services')
         io.show_installed_services(verb, pkg_data)
-    elif ns.i:
+    elif ns.inspect:
         completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
         inp = io.prompt_for_package(completions)
         io.show_package_details(inp, pkg_data)

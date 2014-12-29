@@ -38,10 +38,10 @@ def main():
     show_parser = subs.add_parser('show', help='show the packages installed on a robot')
     mutex = show_parser.add_mutually_exclusive_group()
     mutex.add_argument('-s', '--services', help='show the services installed on the robot',
-                       action='store_true', dest='s')
+                       action='store_true', dest='services')
     mutex.add_argument('-i', '-p', '--inspect', '--package',
                        help='inspect package, prompts for package name',
-                       action='store_true', dest='i')
+                       action='store_true', dest='inspect')
     mutex.add_argument('-a', '--active',
                        help='show active content (behaviors and services) with realtime updates',
                        action='store_true', dest='active')

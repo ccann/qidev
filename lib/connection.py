@@ -59,8 +59,12 @@ class Connection():
             except socket.error as e:
                 verb('Virtual robot detected')
                 self.virtual = True  # assuming this is a virtual bot... kind of a hack?
-        self.install_path = os.path.join(os.path.expanduser('~'), '.local',
-                                         'share', 'PackageManager', 'apps')
+        if self.virtual:
+            self.install_path = os.path.expanduser('~')
+        else:
+            self.install_path = '/home/nao/'  # always linux
+        self.install_path = os.path.join(self.install_path,
+                                         '.local', 'share', 'PackageManager', 'apps')
 
     def transfer(self, pkg_absolute_path):
         """Transfer the package to the remote filesystem.
