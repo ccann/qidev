@@ -72,9 +72,16 @@ def main():
     nao_parser = subs.add_parser('nao', help='run nao commands on remote robot')
     nao_parser.add_argument('action', help='restart, start, stop naoqi on remote host',
                             type=str)
+    nao_parser.add_argument('--ip', nargs='*', type=str, dest='multi',
+                            help='specify multiple hostnames or IP addresses')
 
-    subs.add_parser('reboot', help='reboot the robot')
-    subs.add_parser('shutdown', help='shutdown the robot')
+    reboot_parser = subs.add_parser('reboot', help='reboot the robot')
+    reboot_parser.add_argument('--ip', nargs='*', type=str, dest='multi',
+                               help='specify multiple hostnames or IP addresses')
+
+    shutdown_parser = subs.add_parser('shutdown', help='shutdown the robot')
+    shutdown_parser.add_argument('--ip', nargs='*', type=str, dest='multi',
+                                 help='specify multiple hostnames or IP addresses')
 
     subs.add_parser('rest', help='put the robot to rest')
     subs.add_parser('wake', help='wake up the robot')
@@ -84,6 +91,8 @@ def main():
                                help='int from 0 to 100 with optional + or - prefix to modify ' +
                                'current level; use "up" and "down" to increase or decrease ' +
                                'volume by 10.', type=str)
+    volume_parser.add_argument('--ip', nargs='*', type=str, dest='multi',
+                               help='specify multiple hostnames or IP addresses')
 
     dialog_parser = subs.add_parser('dialog', help='show dialog')
 

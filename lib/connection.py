@@ -24,6 +24,8 @@ class Connection():
             except IOError:
                 raise RuntimeError('%s: Connect to a hostname first with "qidev connect"' %
                                    col.red('ERROR'))
+        else:
+            self.hostname = hostname
         verb('Connect to {}'.format(self.hostname))
         self.user = username
         self.pw = password

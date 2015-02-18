@@ -6,7 +6,7 @@ from clint.textui import colored as col
 import sys
 import select
 import re
-# import threading
+from threading import Thread
 # import socket
 # import curses
 # import functools
@@ -245,36 +245,82 @@ def life_handler(ns):
 def nao_handler(ns):
     """Issue a nao command via SSH."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb, qi_session=False)
-    verb('nao action: {}'.format(ns.action))
-    print('{} naoqi on {}'.format(ns.action, col.magenta(conn.get_robot_name())))
-    sshin, sshout, ssherr = conn.ssh.exec_command('sudo /etc/init.d/naoqi %log' % ns.action)
-    io.format_nao_output(sshout, ns.action)
+
+    def nao_command(conn):
+        verb('nao action: {}'.format(ns.action))
+        print('{} naoqi on {}'.format(ns.action, col.magenta(conn.get_robot_name())))
+        command = 'sudo /etc/init.d/naoqi {}'.format(ns.action)
+        verb(command)
+        sshin, sshout, ssherr = conn.ssh.exec_command(command)
+        io.format_nao_output(sshout, ns.action)
+        print('\n')
+
+    if ns.multi:
+        for ip in ns.multi:
+            try:
+                nao_command(Connection(verb, hostname=ip))
+            except RuntimeError as e:
+                print(e)
+    else:
+        nao_command(Connection(verb))
 
 
 def reboot_handler(ns):
     """Reboot the robot."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb, ssh=False)
-    print('Rebooting ...')
-    conn.robot_reboot()
+
+    def reboot(conn):
+        print('Reboot {}'.format(col.magenta(conn.get_robot_name())))
+        t = Thread(target=conn.robot_reboot)
+        t.start()
+
+    if ns.multi:
+        for ip in ns.multi:
+            try:
+                reboot(Connection(verb, hostname=ip, ssh=False))
+            except RuntimeError as e:
+                print(e)
+    else:
+        reboot(Connection(verb, ssh=False))
 
 
 def shutdown_handler(ns):
     """Shutdown the robot."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb, ssh=False)
-    print('Shutting down ...')
-    conn.robot_shutdown()
+
+    def shutdown(conn):
+        print('{} shutting down'.format(col.magenta(conn.get_robot_name())))
+        t = Thread(target=conn.robot_shutdown)
+        t.start()
+
+    if ns.multi:
+        for ip in ns.multi:
+            try:
+                shutdown(Connection(verb, hostname=ip, ssh=False))
+            except RuntimeError as e:
+                print(e)
+    else:
+        shutdown(Connection(verb, ssh=False))
 
 
 def vol_handler(ns):
     """Change the volume of the robot."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb, ssh=False)
-    verb('Volume level: {}'.format(ns.level))
-    target = conn.set_volume(ns.level)
-    print('Setting volume to {}'.format(col.magenta(target)))
+
+    def set_vol(conn):
+        verb('Volume level: {}'.format(ns.level))
+        target = conn.set_volume(ns.level)
+        print("Set {}'s volume to {}"
+              .format(conn.get_robot_name(), col.magenta(target)))
+
+    if ns.multi:
+        for ip in ns.multi:
+            try:
+                set_vol(Connection(verb, hostname=ip, ssh=False))
+            except RuntimeError as e:
+                print(e)
+    else:
+        set_vol(Connection(verb, ssh=False))
 
 
 def wake_handler(ns):

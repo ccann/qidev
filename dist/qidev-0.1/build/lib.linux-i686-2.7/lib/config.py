@@ -5,7 +5,10 @@ path = os.path.join(os.path.expanduser('~'), '.qidev')
 
 
 def read_field(field):
-    """Read .qidev json file."""
+    """Read the .qidev JSON file.
+    :param field: (str) the field to read from the config file
+    :return: the value of the field
+    """
     if not os.path.exists(path):
         return None
     else:
@@ -18,7 +21,10 @@ def read_field(field):
 
 
 def write_field(field, value):
-    """Write field value pair to .qidev json file."""
+    """Write a field to the .qidev JSON file.
+    :param field: (str) the field to write
+    :param value: (str) the value of that field
+    """
     if not os.path.exists(path):
         with open(path, 'w+') as json_file:
             data = {field: value}
