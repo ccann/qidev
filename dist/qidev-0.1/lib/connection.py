@@ -135,12 +135,9 @@ class Connection():
         """
         pacman = self.session.service('PackageManager')
         pkg = abs_path.split(os.sep)[-1]
-        pkg_name = pkg.replace('.pkg', '')
-        try:
-            pacman.remove(pkg_name)
-            self.verb('Removed previous package: {}'.format(pkg_name))
-        except RuntimeError:
-            pass
+        uuid = pkg.replace('.pkg', '')
+        if self.remove_package(uuid):
+            self.verb('Removed previous package: {}'.format(uuid))
         if self.virtual:
             pacman.install(os.path.join(abs_path))
         else:
