@@ -1,7 +1,5 @@
 # qidev
 
-test
-
 ## Installation
 
 ```sh
