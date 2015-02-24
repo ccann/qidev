@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+
+"""qidev.py
+
+Instantiate the parser, all subparsers, and their arguments. Execute the
+handler associated with the subparser.
+"""
+
 import sys
 import argparse
 

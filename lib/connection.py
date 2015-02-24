@@ -1,3 +1,10 @@
+"""
+connection.py
+
+A Connection object manages all remote communication via SSH and qi Session.
+"""
+
+
 import qi
 import os
 import paramiko
@@ -13,10 +20,16 @@ qi.logging.setLevel(0)
 
 
 class Connection():
-    """Establish a connection to hostname and a qi session."""
+    """Establish a connection to ip/hostname and a qi session."""
 
-    def __init__(self, verb, hostname=None, port='9559', username='nao', password='nao',
-                 ssh=True, qi_session=True):
+    def __init__(self,
+                 verb,  # verbose print function
+                 hostname=None,  # ip/hostname
+                 port='9559',
+                 username='nao',
+                 password='nao',
+                 ssh=True,  # create SSH tunnel?
+                 qi_session=True):  # create qi session?
         self.verb = verb
         if not hostname:
             try:
@@ -75,9 +88,6 @@ class Connection():
         pkg = pkg_absolute_path.split(os.sep)[-1]
         if not self.virtual:
             remote_path = os.path.join(self.install_path, pkg)
-            # os.system('rsync -a --ignore-existing "{}" nao@{}:{}'.format(pkg_absolute_path,
-            #                                                              self.hostname,
-            #                                                              remote_path))
             self.scp.put(pkg_absolute_path, remote_path)
         return pkg
 
@@ -256,8 +266,6 @@ class Connection():
         wr_id = wr.signal.connect(io.show_dialog_input)
         li = memory.subscriber('Dialog/Answered')
         li_id = li.signal.connect(io.show_dialog_output)
-        # sr = memory.subscriber('ALSpeechRecognition/Status')
-        # sr_id = sr.signal.connect(io.dialog_separator)
         while(True):
             try:
                 inp = raw_input()
@@ -265,7 +273,6 @@ class Connection():
             except KeyboardInterrupt:
                 wr.signal.disconnect(wr_id)
                 li.signal.disconnect(li_id)
-                # sr.signal.disconnect(sr_id)
                 print('')
                 break
 
