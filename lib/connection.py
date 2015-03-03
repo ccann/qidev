@@ -48,7 +48,8 @@ class Connection():
         if qi_session:
             verb('Create qi session')
             try:
-                self.session = qi.Session(self.hostname)
+                self.session = qi.Session()
+                self.session.connect(self.hostname)
             except RuntimeError:
                 raise RuntimeError('%s: could not establish connection to %s' %
                                    (col.red('ERROR'), col.blue(self.hostname)))
