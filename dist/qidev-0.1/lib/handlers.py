@@ -1,3 +1,11 @@
+"""
+handlers.py
+
+A handler is a function assigned to handle all the functionality associated
+with a particular command line subparser.
+"""
+
+
 import os
 import clio as io
 import config
@@ -7,10 +15,6 @@ import sys
 import select
 import re
 from threading import Thread
-# import socket
-# import curses
-# import functools
-# import urwid
 
 
 def verbose_print(flag):
@@ -132,50 +136,6 @@ def show_handler(ns):
         io.show_running(conn.get_running_behaviors(),
                         conn.get_running_services(),
                         pkg_data)
-
-        # def refresh_content(value, *args):
-        #     behaviors = conn.get_running_behaviors()
-        #     services = conn.get_running_services()
-        #     choices = behaviors + services
-        #     os.write(io.pipe, ';'.join(choices))
-
-        # behman = conn.session.service('ALBehaviorManager')
-        # servman = conn.session.service('ALServiceManager')
-        # beh_started_id = behman.behaviorStarted.connect(refresh_content)
-        # beh_stopped_id = behman.behaviorStopped.connect(refresh_content)
-        # serv_started_id = servman.serviceStarted.connect(refresh_content)
-        # serv_stopped_id = servman.serviceStopped.connect(refresh_content)
-
-        # io.show_running(conn)
-        # stdscr = ready_screen()
-
-        # def refresh_content(value, *args):
-        #     if not value == 'first':
-        #         # curses.flash()
-        #         stdscr.clear()
-        #     io.show_running(stdscr,
-        #                     conn,
-        #                     value,
-        #                     pkg_data)
-        #     stdscr.refresh()
-        # refresh_content('first')
-
-        # def disconnect():
-        #     behman.behaviorStarted.disconnect(beh_started_id)
-        #     behman.behaviorStopped.disconnect(beh_stopped_id)
-        #     servman.serviceStarted.disconnect(serv_started_id)
-        #     servman.serviceStopped.disconnect(serv_stopped_id)
-        #     close_screen(stdscr)
-
-        # while(True):
-        #     try:
-        #         c = stdscr.getch()
-        #         if c == ord('q'):
-        #             disconnect()
-        #             break
-        #     except KeyboardInterrupt:
-        #         disconnect()
-        #     break
     else:
         io.show_installed_packages(verb, pkg_data)
 
@@ -389,20 +349,3 @@ def log_handler(ns):
                     print('exception when closing SSH Client: {}'.format(e))
                 finally:
                     break
-
-# def ready_screen():
-#     stdscr = curses.initscr()
-#     curses.start_color()
-#     curses.use_default_colors()
-#     curses.noecho()
-#     curses.curs_set(0)
-#     curses.cbreak()  # react instantly to 'q' for example
-#     return stdscr
-
-
-# def close_screen(stdscr):
-#     curses.nocbreak()
-#     stdscr.keypad(0)
-#     curses.curs_set(1)
-#     curses.echo()  # undo everything
-#     curses.endwin()

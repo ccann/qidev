@@ -1,3 +1,9 @@
+"""
+config.py
+
+functions for reading and writing configurations to JSON file .qidev
+"""
+
 import os
 import json
 
