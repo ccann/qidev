@@ -8,6 +8,12 @@ from clint.textui import colored as col
 from clint.textui import puts, indent
 from tabulate import tabulate
 import readline
+readline.set_completer_delims('')
+if 'libedit' in readline.__doc__:
+    # see: http://stackoverflow.com/questions/7116038/python-tab-completion-mac-osx-10-7-lion
+    readline.parse_and_bind("bind ^I rl_complete")
+else:
+    readline.parse_and_bind("tab: complete")
 import sys
 
 
@@ -33,15 +39,16 @@ def show_installed_packages(verb, pkgs):
     """Pretty-print a table of installed packages."""
     table = list()
     for p in pkgs:
-        n_behaviors = str(len(p.behaviors)) if p.behaviors else None
-        n_services = str(len(p.services)) if p.services else None
+        n_behaviors = len(p.behaviors) if p.behaviors else None
+        n_services = len(p.services) if p.services else None
         table.append([bold(p.name),
+                      p.uuid,
                       p.version,
                       n_behaviors,
                       n_services])
     print ''
     print tabulate(table,
-                   headers=['Package Name', 'Version', 'Behaviors', 'Services'],
+                   headers=['Package Name', 'Unique ID', 'Version', 'Behaviors', 'Services'],
                    tablefmt="orgtbl")
     print ''
 
@@ -52,19 +59,18 @@ def show_installed_services(verb, pkgs):
     for p in pkgs:
         for s in p.services:
             table.append([bold(p.name),
+                          p.uuid,
                           s.name,
                           col.green('True') if s.auto_run else col.red('False')])
     print('')
     print tabulate(table,
-                   headers=['Package Name', 'Service Name', 'Autorun?'],
+                   headers=['Package Name', 'Unique ID', 'Service Name', 'Autorun?'],
                    tablefmt='orgtbl')
     print('')
 
 
 def prompt_for_package(completions):
     """Prompt the user to specify the package name."""
-    readline.set_completer_delims('')
-    readline.parse_and_bind("tab: complete")
     readline.set_completer(create_completer(completions))
     try:
         inp = raw_input('Enter package name or UUID (tab to complete)\n> ')
@@ -75,8 +81,6 @@ def prompt_for_package(completions):
 
 def prompt_for_behavior(behaviors, completions=None):
     """Prompt the user to specify behavior name."""
-    readline.set_completer_delims('')
-    readline.parse_and_bind("tab: complete")
     if not completions:
         readline.set_completer(create_completer(behaviors))
     else:
@@ -100,19 +104,27 @@ def pretty(o):
 
 def put_behavior_string(b):
     """Print information about a behavior."""
-    puts(bold('* {} (behavior)'.format(bold(b.name))))
-    with indent(4):
-        nat = b.nature
-        nature = col.red(nat) if nat == 'interactive' else col.blue(nat)
-        puts(pretty('Nature') + nature)
+    if not b.name:
+        name = b.rel_path
+    else:
+        name = b.name
+    nat = b.nature
+    if nat == 'solitary':
+        nature = col.yellow('solitary')
+    if nat == 'interactive':
+        nature = col.red('interactive')
+    else:
+        nature = 'no-nature'
+    puts(bold('* {}'.format(name)) + ' ({})'.format(nature))
 
 
 def put_service_string(s):
     """Print information about a service."""
     try:
-        puts(bold('* {} (service)'.format(bold(s.name))))
+        puts(bold('* {}'.format(s.name)) + ' (service)')
         with indent(4):
-            puts(pretty('AutoRun') + 'True' if s.auto_run else 'False')
+            puts(pretty('autoRun') + col.red('True') if s.auto_run else 'False')
+            puts(pretty('execStart') + s.exec_start)
     except KeyError:
         pass
 
@@ -124,26 +136,40 @@ def show_package_details(package, pkgs):
         if p.name == package or p.uuid == package:
             print('* {} ({})'.format(bold(p.name),
                                      col.cyan('v' + p.version)))
-            with indent(4):
+            with indent(2):
                 puts(pretty('UUID') + p.uuid)
                 try:
                     mn, mx = p.naoqi_min, p.naoqi_max
-                    if not mn and not mx:
-                        mn = 'unspecified'
-                        mx = ''
-                    puts(pretty('NaoQi Requirements') + mn + mx)
+                    if not mn:
+                        mn = '0.0.0'
+                    if not mx:
+                        mx = 'INF'
+                    puts(pretty('NaoQi Requirements') + '{} <= version <= {}'.format(mn, mx))
                 except IndexError:
                     pass
-                puts(pretty('Supported Languages') +
-                     pretty(p.supported_langs))
                 try:
-                    puts(pretty('Desciption') + p.description)
+                    puts(pretty('Supported Languages') +
+                         pretty(p.supported_langs))
+                except AttributeError:
+                    pass
+                try:
+                    max_len = 200
+                    if len(p.description) > max_len:
+                        puts(pretty('Desciption') + '{}...'.format(p.description[:max_len]))
+                    else:
+                        puts(pretty('Desciption') + '{}'.format(p.description))
                 except KeyError:
                     pass
-                for b in p.behaviors:
-                    put_behavior_string(b)
-                for s in p.services:
-                    put_service_string(s)
+                if p.behaviors:
+                    puts(pretty('Behaviors ({})'.format(len(p.behaviors))))
+                    with indent(2):
+                        for b in p.behaviors:
+                            put_behavior_string(b)
+                if p.services:
+                    puts(pretty('Services ({})'.format(len(p.services))))
+                    with indent(2):
+                        for s in p.services:
+                            put_service_string(s)
     print('')
 
 

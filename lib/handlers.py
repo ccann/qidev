@@ -65,13 +65,13 @@ def remove_handler(ns):
     verb = verbose_print(ns.verbose)
 
     def get_completions(conn):
-        pkg_data = conn.get_installed_package_data()
+        pkg_data = conn.get_installed_package_data(verb)
         completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
         return completions
 
     def remove(conn, inp):
         # if we matched a package name, replace it with the pkg uuid
-        pkg_data = conn.get_installed_package_data()
+        pkg_data = conn.get_installed_package_data(verb)
         if inp in [p.name for p in pkg_data]:
             for pkg in pkg_data:
                 if pkg.name == inp:
@@ -123,7 +123,7 @@ def show_handler(ns):
     verb = verbose_print(ns.verbose)
     conn = Connection(verb, ssh=False)
     verb('Check installed packages...')
-    pkg_data = conn.get_installed_package_data()
+    pkg_data = conn.get_installed_package_data(verb)
     if ns.services:
         verb('Show installed services')
         io.show_installed_services(verb, pkg_data)

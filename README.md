@@ -9,8 +9,8 @@ $ cd dist/qidev-X.X  # where X.X is the version number
 $ sudo python setup.py install
 ```
 
-You're going to need qi (in choregraphe/lib) in your PYTHONPATH. If you use fish shell you can
-add the following to your config.fish: 
+You're going to need `qi` (in choregraphe/lib) in your `PYTHONPATH`. If you use
+fish shell you can add the following to your config.fish:
 
 ```sh
 $ set -x PYTHONPATH $HOME/path/to/choregraphe-suite-x.x.x.xx/lib $PYTHONPATH
@@ -22,35 +22,39 @@ $ qidev --help
 ``` 
 
 ## Connect to your robot
-Set the 'hostname' field in ~/.qidev to the IP address or hostname of the robot. Doing so points all future qidev commands to that address.
+Set the 'hostname' field in ~/.qidev to the IP address or hostname of the robot. Points all future commands to that address.
+
 ```sh
 $ qidev config hostname Michelangelo.local
+$ qidev config hostname 10.1.42.21
 
 # shortcut...
 $ qidev connect Michelangelo.local
 ```
 
+### Specify IP Address(es)
+You can specify (an) IP address(es) for a single command with `--ip` for many commands. For example:
+
+```sh
+$ qidev install /path/to/my/project --ip Michelangelo.local Donatello.local Raphael.local Leonardo.local
+```
+
 ## Install a package
-Point qidev to your application folder (containing the manifest.xml), package your project (create a .pkg), push it to the robot (via SCP), and install it (via PackageManager).
+Point qidev to your application folder (containing the manifest.xml), package your project (create a .pkg), push it to the robot (via SCP), and install it (via PackageManager). Supports `--ip`.
 ```sh
 $ cd /path/to/my/project
 $ qidev install .
 
 # alternatively...
 $ qidev install /path/to/my/project
-
-# install on multiple robots
-$ qidev install /path/to/my/project --ip Michelangelo.local Donatello.local Raphael.local Leonardo.local
 ```
 
 ## Remove a package
-Remove an installed package from the robot.
+Remove an installed package from the robot. Supports `--ip`.
 ```sh
 $ qidev remove
-
-# from multiple robots...
-$ qidev remove --ip Michelangelo.local Donatello.local Raphael.local Leonardo.local
 ```
+
 Return key prompts for package name or UUID with tab-completion. The set of eligible packages is the union of packages installed on all targeted robots. If the package selected for removal is not installed on one of the specified targets, it's just skipped.
 
 ## Show content
@@ -79,6 +83,7 @@ $ qidev life off
 ```
 
 ## NAOqi management
+Supports `--ip`
 ```sh
 $ qidev nao restart
 $ qidev nao stop
@@ -86,9 +91,10 @@ $ qidev nao start
 ```
 
 ## Power management
+Supports `--ip`
 ```sh
-$ qidev reboot  
-$ qidev shutdown  
+$ qidev reboot
+$ qidev shutdown
 ```
 
 ## Stiffness
@@ -98,6 +104,7 @@ $ qidev wake  # wake up robot
 ```
 
 ## Volume
+Supports `--ip`
 ```sh
 $ qidev vol n     # set volume to 0 <= n <= 100
 $ qidev vol +n    # increase current volume by n
@@ -117,4 +124,4 @@ $ qidev config log_path /where/I/want/tail-naoqi.log/written  # $HOME by default
 ```sh
 $ qidev dialog  # interactive dialog window
 ```
-Type to force input to the robot.  
+Type to force input to the robot.
