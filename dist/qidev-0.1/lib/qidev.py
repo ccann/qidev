@@ -62,6 +62,8 @@ def main():
     start_parser.add_argument('-b', '--bm',
                               help='use ALBehaviorManager to start a behavior or service',
                               dest='bm', action='store_true')
+    start_parser.add_argument('--ip', nargs='*', type=str, dest='multi',
+                              help='specify multiple hostnames or IP addresses')
 
     stop_parser = subs.add_parser('stop',
                                   help='stop the currently focused activity; prompts for ' +

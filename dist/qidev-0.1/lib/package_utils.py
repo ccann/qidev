@@ -1,4 +1,5 @@
-"""Utilities for working with ALPackageManager.
+"""
+Utilities for working with ALPackageManager.
 
 This script provides functions to extract elements from the packages list
 returned by PackageManager.packages(). It is intended to allow the developer to
@@ -8,12 +9,11 @@ packages2())
 """
 import re
 import os
+import qi
 
-__author__ = "Cody Canning"
-
-# Example package2
-package2 = {
-    "uuid": "robot-control-c6d14c",
+# Example PACKAGE_2
+PACKAGE_2 = {
+    "uuid": "robot-control",
     "version": "0.0.3",
     "author": "",
     "channel": "",
@@ -21,7 +21,7 @@ package2 = {
     "date": "",
     "typeVersion": "",
     "installer": "cloud.aldebaran-robotics.com",
-    "path": "/home/nao/.local/share/PackageManager/apps/robot-control-c6d14c",
+    "path": "/home/nao/.local/share/PackageManager/apps/robot-control",
     "elems": {
         "names": {"en_US": "Robot Control"},
         "contents": {
@@ -61,10 +61,10 @@ package2 = {
     }  # closes elems
 }  # closes entire package
 
-# Example package1
-package1 = {
-    "uuid": "robot-control-c6d14c",
-    "path": "/home/nao/.local/share/PackageManager/apps/robot-control-c6d14c",
+# Example PACKAGE_1
+PACKAGE_1 = {
+    "uuid": "robot-control",
+    "path": "/home/nao/.local/share/PackageManager/apps/robot-control",
     "version": "0.0.4",
     "channel": "",
     "author": "",
@@ -112,7 +112,7 @@ package1 = {
 }
 
 
-class Package():
+class Package(object):
 
     def __init__(self, pdict, lang):
         """Create an instance of a Package based on a dict of manifest data.
@@ -136,70 +136,90 @@ class Package():
         self.behaviors = self.get_behs(pdict, lang)
         self.services = self.get_servs(pdict)
 
-    def get_name(self, p, lang):
+    def __eq__(self, other):
+        return self.uuid == other.uuid
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        return self.uuid < other.uuid
+
+    @staticmethod
+    def get_name(pack, lang):
         """Return the localized name of the package or UUID as last resort."""
         try:
-            name = p['elems']['names'][lang]
+            name = pack['elems']['names'][lang]
         except KeyError:
             try:
-                name = p['langToName'][lang]
+                name = pack['langToName'][lang]
             except KeyError:
-                name = p['uuid']
+                name = pack['uuid']
         return name
 
-    def get_naoqi_reqs(self, p):
+    @staticmethod
+    def get_naoqi_reqs(pack):
+        """Get naoqi requirements."""
         try:
-            nr = p['elems']['requirements'][1][0]
+            naoqi_reqs = pack['elems']['requirements'][1][0]
         except (KeyError, IndexError):
             try:
-                nr = p['naoqiRequirements'][0]
+                naoqi_reqs = pack['naoqiRequirements'][0]
             except (KeyError, IndexError):
                 return '', ''
-        return nr['minVersion'], nr['maxVersion']
+        return naoqi_reqs['minVersion'], naoqi_reqs['maxVersion']
 
-    def get_supported_languages(self, p):
+    @staticmethod
+    def get_supported_languages(pack):
+        """Get list of languages supported by package."""
         try:
-            return p['elems']['supportedLanguages']
+            return pack['elems']['supportedLanguages']
         except KeyError:
             try:
-                return p['supportedLanguages']
+                return pack['supportedLanguages']
             except KeyError:
                 return list()
 
-    def get_description(self, p, lang):
+    @staticmethod
+    def get_description(pack, lang):
+        """Get package description"""
         try:
-            return p['elems']['descriptions'][lang]
+            return pack['elems']['descriptions'][lang]
         except KeyError:
             try:
-                return p['langToDesc'][lang]
+                return pack['langToDesc'][lang]
             except KeyError:
                 return ''
 
-    def get_behs(self, p, lang):
+    def get_behs(self, pack, lang):
+        """Get behaviors in a package."""
         try:
             return [Behavior(self, d, lang) for d in
-                    p['elems']['contents']['behaviors']]
+                    pack['elems']['contents']['behaviors']]
         except KeyError:
             try:
-                return [Behavior(self, d, lang) for d in p['behaviors']]
+                return [Behavior(self, d, lang) for d in pack['behaviors']]
             except KeyError:
                 return list()
 
-    def get_servs(self, p):
+    @staticmethod
+    def get_servs(pack):
+        """Get services in a package."""
         try:
-            elems = p['elems']
+            elems = pack['elems']
             try:
                 return [Service(d) for d in elems['services']]
             except KeyError:
                 return list()
         except KeyError:
-            return [Service(d) for d in p['services']]
+            return [Service(d) for d in pack['services']]
 
 
-class Behavior():
+class Behavior(object):
 
     def __init__(self, package, bdict, lang):
-        """Create an instance of a Behavior based on a dictionary of manifest data.
+        """Create an instance of a Behavior based on a dictionary of manifest
+        data.
         :param package: instance of the package class that contains the behavior
         :param bdict: dict of the behavior's manifest data
         :param lang: the language to use e.g. en_US
@@ -209,7 +229,8 @@ class Behavior():
         self.name = self.get_name(bdict, lang)
         self.rel_path = bdict['path']
         # e.g. tog-gun-4313f4/behavior_1 or tog-gun-4313f4/.
-        self.launch_path = os.path.join(os.path.split(self.package.path)[1], self.rel_path)
+        self.launch_path = os.path.join(os.path.split(self.package.path)[1],
+                                        self.rel_path)
         self.utterable_name = self.get_utterable_name(self.name)
         self.nature = bdict['nature']
         self.description = self.get_desciption(bdict, lang)
@@ -220,15 +241,34 @@ class Behavior():
         self.categories = bdict['categories']
         self.permisions = bdict['permissions']
 
-    def get_name(self, b, lang):
+    def __eq__(self, other):
+        return self.launch_path == other.launch_path
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        return self.launch_path < other.launch_path
+
+    def __dict__(self):
+        beh = dict()
+        beh['name'] = self.utterable_name
+        beh['id'] = self.launch_path
+        beh['uuid'] = self.package.uuid
+        beh['launch_path'] = self.launch_path
+        return beh
+
+    @staticmethod
+    def get_name(beh, lang):
+        """Get behaviour name."""
         try:
-            return b['langToName'][lang]
+            return beh['langToName'][lang]
         except KeyError:
             return ''
 
     def get_utterable_name(self, name):
         """Return a name you can speak."""
-        if self.rel_path == '.':
+        if self.rel_path == '.' and not name:
             return self.package.utterable_name
         elif not name:
             return make_utterable('%s-%s' %
@@ -237,33 +277,43 @@ class Behavior():
         else:
             return make_utterable('%s-%s' % (self.package.name, name))
 
-    def get_desciption(self, b, lang):
+    @staticmethod
+    def get_desciption(beh, lang):
+        """Get behavior description."""
         try:
-            return b['langToDesc'][lang]
+            return beh['langToDesc'][lang]
         except KeyError:
             return ''
 
-    def get_tags(self, b, lang):
+    @staticmethod
+    def get_tags(beh, lang):
+        """Get behaviour tags."""
         try:
-            return b['langToTags'][lang]
+            return set(beh['langToTags'][lang])
         except KeyError:
-            return list()
+            return set()
 
-    def get_trigger_sentences(self, b, lang):
+    @staticmethod
+    def get_trigger_sentences(beh, lang):
+        """Get behaviour trigger sentences."""
         try:
-            return b['langToTriggerSentences'][lang]
+            return set(beh['langToTriggerSentences'][lang])
         except KeyError:
-            return list()
+            return set()
 
-    def get_loading_responses(self, b, lang):
+    @staticmethod
+    def get_loading_responses(beh, lang):
+        """Get behaviour loading responses."""
         try:
-            return b['langToLoadingResponses'][lang]
+            return set(beh['langToLoadingResponses'][lang])
         except KeyError:
-            return list()
+            return set()
 
-    def get_launch_triggers(self, b):
+    @staticmethod
+    def get_launch_triggers(beh):
+        """Get behaviour launch triggers."""
         try:
-            return b['purposeToCondition']['launchTrigger']
+            return beh['purposeToCondition']['launchTrigger']
         except KeyError:
             return list()
 
@@ -275,52 +325,60 @@ class Service():
         self.exec_start = sdict['execStart']
 
 
-def get_packages(pacman, lang, verb=None):
+def get_packages(lang, verb, session=None):
     """Return the installed packages as a list of package dicts
     :param pacman: the PackageManager service
     :param lang: the language e.g. en_US
     """
+    if not session:
+        session = qi.Session()
+        session.connect('localhost')
+    pacman = session.service('PackageManager')
     try:
         packs = pacman.packages2()
-        if verb:
-            verb('Use pacman.packages2')
+        verb('Use pacman.packages2')
     except AttributeError:
         packs = pacman.packages()
-        if verb:
-            verb('Use pacman.packages')
+        verb('Use pacman.packages')
     return [Package(d, lang) for d in packs]
 
 
 def make_utterable(name):
     """Take an application or behavior name and make it utterable.
-    - Remove the uuid
-    - Turn camelCase into whitespace separation
-    - Replace separators with whitespace
-    - e.g. make_utterable('robot-control-c6d14c') => 'Robot Control'
+    e.g. make_utterable('robot-control-5fg3ed') => 'Robot Control'
+
+    - split by / and map over each part:
+      - Remove the uuid hash
+      - Turn camelCase into whitespace separation
+      - Replace separators with whitespace
+    - join back together
     """
-    removed_uid = re.sub('(\w*)([-_][a-zA-Z0-9]{6}$)', r'\1', name)
-    replaced_camelcase = re.sub(r'([A-Z 0-9])', r' \1', removed_uid)
-    replaced_separators = re.sub('[\./_-]', ' ', replaced_camelcase)
-    replaced_spaces = re.sub('[ ]+', ' ', replaced_separators)
-    return replaced_spaces.strip().title()
+    def utterable(name):
+        removed_uid = re.sub(r'(\w*)([-_][a-zA-Z0-9]{6}$)', r'\1', name)
+        replaced_camelcase = re.sub(r'([A-Z 0-9])', r' \1', removed_uid)
+        replaced_separators = re.sub(r'[\./_-]', ' ', replaced_camelcase)
+        replaced_spaces = re.sub(r'[ ]+', ' ', replaced_separators)
+        return replaced_spaces.strip().title()
+
+    parts = name.split('/')
+    return ' '.join(map(utterable, parts)).strip()
 
 
 def main():
+    """Main fucntion for testing the classes"""
     # for testing
     from pprint import pprint
-    import qi
-    sess = qi.Session('Michelangelo.local')
-    pacman = sess.service('PackageManager')
-    # packages = [package1, package2]
-    for p in get_packages(pacman, 'en_US'):
-        pprint(vars(p))
+    sess = qi.Session('Raphael.local')
+    # packages = [PACKAGE_1, PACKAGE_2]
+    for pack in get_packages('en_US', sess):
+        pprint(vars(pack))
         print
-        for b in p.behaviors:
-            if b.trigger_sentences:
-                pprint(vars(b))
+        for beh in pack.behaviors:
+            if beh.trigger_sentences:
+                pprint(vars(beh))
                 print
-        for s in p.services:
-            pprint(vars(s))
+        for serv in pack.services:
+            pprint(vars(serv))
             print
 
 if __name__ == '__main__':

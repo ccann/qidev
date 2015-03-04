@@ -165,9 +165,8 @@ class Connection():
         except RuntimeError:
             return False
 
-    def get_installed_package_data(self):
-        pacman = self.session.service('PackageManager')
-        return pu.get_packages(pacman, 'en_US', verb=self.verb)
+    def get_installed_package_data(self, verb):
+        return pu.get_packages('en_US', verb, session=self.session)
 
     def get_running_behaviors(self):
         behman = self.session.service('ALBehaviorManager')
