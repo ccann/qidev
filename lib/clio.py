@@ -69,27 +69,24 @@ def show_installed_services(verb, pkgs):
     print('')
 
 
-def prompt_for_package(completions):
-    """Prompt the user to specify the package name."""
+def _prompt(prompt_text, completions):
+    """Prompt the user with tab completions."""
     readline.set_completer(create_completer(completions))
     try:
-        inp = raw_input('Enter package name or UUID (tab to complete)\n> ')
+        inp = raw_input(prompt_text + ' (tab to complete) \n> ')
+        return inp
     except KeyboardInterrupt:
         sys.exit()
-    return inp
 
 
-def prompt_for_behavior(behaviors, completions=None):
-    """Prompt the user to specify behavior name."""
-    if not completions:
-        readline.set_completer(create_completer(behaviors))
-    else:
-        readline.set_completer(create_completer(completions))
-    try:
-        inp = raw_input('Enter package-uuid/behavior-name (tab to complete)\n> ')
-    except KeyboardInterrupt:
-        sys.exit()
-    return inp
+def prompt_for_service(service_names):
+    """Prompt the user for the name of a service, provide tab-completions"""
+    return _prompt('Enter service name', service_names)
+
+
+def prompt_for_behavior(behavior_names):
+    """Prompt the user for the name of a behavior, provide tab-completions"""
+    return _prompt('Enter package-uuid/behavior-name', behavior_names)
 
 
 def pretty(o):

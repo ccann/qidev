@@ -194,30 +194,48 @@ class Connection():
 
     def start_behavior(self, behavior):
         behman = self.session.service('ALBehaviorManager')
-        behman.startBehavior(behavior)
+        try:
+            behman.startBehavior(behavior)
+            return True
+        except RuntimeError:
+            return False
 
     def stop_behavior(self, behavior):
         behman = self.session.service('ALBehaviorManager')
-        behman.stopBehavior(behavior)
+        try:
+            behman.stopBehavior(behavior)
+            return True
+        except RuntimeError:
+            return False
 
     def life_switch_focus(self, activity):
         life = self.session.service('ALAutonomousLife')
-        life.switchFocus(activity)
+        try:
+            life.switchFocus(activity)
+            return True
+        except RuntimeError:
+            return False
 
     def life_stop_focus(self):
         life = self.session.service('ALAutonomousLife')
+        try:
+            life.stopFocus()
+            return True
+        except RuntimeError:
+            return False
         life.stopFocus()
+
+    def get_focused_activity(self):
+        life = self.session.service('ALAutonomousLife')
+        return life.focusedActivity()
 
     def start_service(self, service):
         servman = self.session.service('ALServiceManager')
-        if servman.isServiceRunning(service):
-            servman.restartService(service)
-        else:
-            servman.startService(service)
+        return servman.startService(service)
 
     def stop_service(self, service):
         servman = self.session.service('ALServiceManager')
-        servman.stopService(service)
+        return servman.stopService(service)
 
     def life_off(self):
         life = self.session.service('ALAutonomousLife')

@@ -53,8 +53,8 @@ def install_handler(ns):
                 print('%log: %log is not a project directory (does not contain manifest.xml)' %
                       (col.red('error'), col.blue(os.getcwd())))
 
-    if ns.multi:
-        for conn in [Connection(verb, hostname=ip) for ip in ns.multi]:
+    if ns.ip:
+        for conn in [Connection(verb, hostname=ip) for ip in ns.ip]:
             install(conn)
     else:
         install(Connection(verb))
@@ -64,7 +64,7 @@ def remove_handler(ns):
     """Remove a package from the robot."""
     verb = verbose_print(ns.verbose)
 
-    def get_completions(conn):
+    def get_completions(conn, verb):
         pkg_data = conn.get_installed_package_data(verb)
         completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
         return completions
@@ -87,18 +87,18 @@ def remove_handler(ns):
             print('removed {} from {}'.format(col.blue(inp),
                                               col.magenta(conn.get_robot_name())))
 
-    if ns.multi:
-        conns = [Connection(verb, ssh=False, hostname=ip) for ip in ns.multi]
+    if ns.ip:
+        conns = [Connection(verb, ssh=False, hostname=ip) for ip in ns.ip]
         completions = set()
         for conn in conns:
-            completions.update(get_completions(conn))
-        inp = io.prompt_for_package(list(completions))
+            completions.update(get_completions(conn, verb))
+        inp = io.prompt(list(completions))
         for conn in conns:
             remove(conn, inp)
     else:
         conn = Connection(verb, ssh=False)
         completions = get_completions(conn)
-        inp = io.prompt_for_package(completions)
+        inp = io.prompt(completions)
         remove(conn, inp)
 
 
@@ -129,7 +129,7 @@ def show_handler(ns):
         io.show_installed_services(verb, pkg_data)
     elif ns.inspect:
         completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
-        inp = io.prompt_for_package(completions)
+        inp = io.prompt(completions)
         io.show_package_details(inp, pkg_data)
     elif ns.active:
         verb('Show active content')
@@ -141,51 +141,115 @@ def show_handler(ns):
 
 
 def start_handler(ns):
-    """Focus an activity or start a behavior or service."""
+    """Focus an activity, start a behavior or service."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb, ssh=False)
-    behaviors = conn.get_installed_behaviors()
-    if ns.bm:  # use behavior manager
-        services = conn.get_declared_services()
-        inp = ns.name if ns.name else io.prompt_for_behavior(services + behaviors)
-        if inp in services:
-            verb('Start service: {}'.format(inp))
-            conn.start_service(inp)
-        elif inp in behaviors:
-            verb('Start behavior: {}'.format(inp))
-            conn.start_behavior(inp)
+
+    def start(conn, selection):
+        error = col.red('error')
+        name = col.magenta(conn.get_robot_name())
+        if selection:
+            s = col.blue(selection)
+        if ns.service:
+            if conn.start_service(selection):
+                print('started {} service on {}'.format(s, name))
+            else:
+                print('{}: failed to start service {} on {} (is it already running?)'.
+                      format(error, s, name))
+        elif ns.behavior:
+            if conn.start_behavior(selection):
+                print('started {} behavior on {}'.format(s, name))
+            else:
+                print('{}: {} is not installed on {}'.format(error, s, name))
         else:
-            print('{}: {} is not an eligible behavior or service'.
-                  format(col.red('error'), inp))
-    else:  # use autonomous life
-        inp = ns.name if ns.name else io.prompt_for_behavior(behaviors)
-        try:
-            verb('Switch focus to: {}'.format(inp))
-            conn.life_switch_focus(inp)
-        except RuntimeError:  # this is a wart but it'log not my fault
-            verb('Couldnt find behavior {} so appending "/.": {}'.format(inp, inp + '/.'))
-            inp = inp+'/.'
-            verb('switch focus to: {}'.format(inp))
-            conn.life_switch_focus(inp)
+            if conn.life_switch_focus(selection):
+                print('focused {} activity on {}'.format(s, name))
+            elif conn.life_switch_focus(selection + '/.'):
+                print('focused {} activity on {}'.format(s, name))
+            else:
+                print('{}: {} failed to switch focus to {} activity'.
+                      format(error, name, s))
+
+    def get_completions(conn):
+        if ns.service:
+            return conn.get_declared_services()
+        else:
+            return conn.get_installed_behaviors()
+
+    if ns.ip:
+        conns = [Connection(verb, ssh=False, hostname=ip) for ip in ns.ip]
+    else:
+        conns = [Connection(verb, ssh=False)]
+    selection = ns.name if ns.name else None
+    if not selection:
+        completions = set()
+        for conn in conns:
+            completions.update(get_completions(conn))
+        if ns.service:
+            selection = io.prompt_for_service(completions)
+        else:
+            selection = io.prompt_for_behavior(completions)
+    for conn in conns:
+        t = Thread(target=start, args=(conn, selection))
+        t.start()
 
 
 def stop_handler(ns):
-    """Stop the focused activity or use behavior manager to stop a behavior or service."""
+    """Stop an activity, behavior or service."""
     verb = verbose_print(ns.verbose)
-    conn = Connection(verb, ssh=False)
-    if ns.bm:  # stop behavior/service
-        services = conn.get_running_services()
-        behaviors = conn.get_running_behaviors()
-        inp = io.prompt_for_behavior(services + behaviors)
-        if inp in services:
-            conn.stop_service(inp)
-        elif inp in behaviors:
-            conn.stop_behavior(inp)
+
+    def stop(conn, selection):
+        error = col.red('error')
+        name = col.magenta(conn.get_robot_name())
+        if selection:
+            s = col.blue(selection)
+        if ns.service:
+            if conn.stop_service(selection):
+                print('stopped {} service on {}'.format(s, name))
+            else:
+                print('{}: failed to stop service {} on {}'.
+                      format(error, s, name))
+        elif ns.behavior:
+            if conn.stop_behavior(selection):
+                print('stopped {} behavior on {}'.format(s, name))
+            else:
+                print('{}: {} is not installed on {}'.format(error, s, name))
         else:
-            print('{}: {} is not an eligible behavior or service'.
-                  format(col.red('error'), col.blue(inp)))
-    else:  # stop the focused activity
-        conn.life_stop_focus()
+            focused = conn.get_focused_activity()
+            if not focused:
+                print('{}: there is no focused activity on {}'.format(error, name))
+            else:
+                focused = col.blue(focused)
+                if conn.life_stop_focus():
+                    print('stopped {} on {}'.format(focused, name))
+                elif conn.life_stop_focus():
+                    print('stopped {} on {}'.format(focused, name))
+                else:
+                    print('{}: failed to stop focused activity on {}'.
+                          format(error, name))
+
+    def get_completions(conn):
+        if ns.service:
+            return conn.get_running_services()
+        else:
+            return conn.get_running_behaviors()
+
+    if ns.ip:
+        conns = [Connection(verb, ssh=False, hostname=ip) for ip in ns.ip]
+    else:
+        conns = [Connection(verb, ssh=False)]
+    selection = ns.name if ns.name else None
+    if ns.behavior or ns.service:
+        if not selection:
+            completions = set()
+            for conn in conns:
+                completions.update(get_completions(conn))
+            if ns.service:
+                selection = io.prompt_for_service(completions)
+            else:
+                selection = io.prompt_for_behavior(completions)
+    for conn in conns:
+        t = Thread(target=stop, args=(conn, selection))
+        t.start()
 
 
 def life_handler(ns):
@@ -215,8 +279,8 @@ def nao_handler(ns):
         io.format_nao_output(sshout, ns.action)
         print('\n')
 
-    if ns.multi:
-        for ip in ns.multi:
+    if ns.ip:
+        for ip in ns.ip:
             try:
                 nao_command(Connection(verb, hostname=ip))
             except RuntimeError as e:
@@ -234,8 +298,8 @@ def reboot_handler(ns):
         t = Thread(target=conn.robot_reboot)
         t.start()
 
-    if ns.multi:
-        for ip in ns.multi:
+    if ns.ip:
+        for ip in ns.ip:
             try:
                 reboot(Connection(verb, hostname=ip, ssh=False))
             except RuntimeError as e:
@@ -253,8 +317,8 @@ def shutdown_handler(ns):
         t = Thread(target=conn.robot_shutdown)
         t.start()
 
-    if ns.multi:
-        for ip in ns.multi:
+    if ns.ip:
+        for ip in ns.ip:
             try:
                 shutdown(Connection(verb, hostname=ip, ssh=False))
             except RuntimeError as e:
@@ -273,8 +337,8 @@ def vol_handler(ns):
         print("Set {}'s volume to {}"
               .format(conn.get_robot_name(), col.magenta(target)))
 
-    if ns.multi:
-        for ip in ns.multi:
+    if ns.ip:
+        for ip in ns.ip:
             try:
                 set_vol(Connection(verb, hostname=ip, ssh=False))
             except RuntimeError as e:
@@ -349,3 +413,5 @@ def log_handler(ns):
                     print('exception when closing SSH Client: {}'.format(e))
                 finally:
                     break
+
+                
