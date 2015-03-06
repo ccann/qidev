@@ -103,7 +103,7 @@ def remove_handler(ns):
             remove(conn, inp)
     else:
         conn = Connection(verb, ssh=False)
-        completions = get_completions(conn)
+        completions = get_completions(conn, verb)
         inp = io.prompt_for_package(completions)
         remove(conn, inp)
 
