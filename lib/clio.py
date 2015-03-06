@@ -10,7 +10,6 @@ from tabulate import tabulate
 import readline
 readline.set_completer_delims('')
 if 'libedit' in readline.__doc__:
-    # see: http://stackoverflow.com/questions/7116038/python-tab-completion-mac-osx-10-7-lion
     readline.parse_and_bind("bind ^I rl_complete")
 else:
     readline.parse_and_bind("tab: complete")
@@ -53,8 +52,6 @@ def show_info(conn):
                           system.systemVersion()))
     tts = conn.session.service('ALTextToSpeech')
     lang = tts.getLanguage()
-    # print('{}: {}'.format(bold('Language'),
-    #                       lang))
     al = tts.getAvailableLanguages()
     al = ['{}'.format(col.green(l.upper())) if l == lang else l for l in al]
     available_langs = ', '.join(al)
@@ -86,7 +83,6 @@ def show_info(conn):
         state = col.red(state)
     print('{}: {}'.format(bold('ALife State'),
                           state))
-
     print('')
 
 
@@ -103,7 +99,8 @@ def show_installed_packages(verb, pkgs):
                       n_services])
     print ''
     print tabulate(table,
-                   headers=['Package Name', 'Unique ID', 'Version', 'Behaviors', 'Services'],
+                   headers=['Package Name', 'Unique ID', 'Version',
+                            'Behaviors', 'Services'],
                    tablefmt="orgtbl")
     print ''
 
@@ -119,7 +116,8 @@ def show_installed_services(verb, pkgs):
                           col.green('True') if s.auto_run else col.red('False')])
     print('')
     print tabulate(table,
-                   headers=['Package Name', 'Unique ID', 'Service Name', 'Autorun?'],
+                   headers=['Package Name', 'Unique ID',
+                            'Service Name', 'Autorun?'],
                    tablefmt='orgtbl')
     print('')
 
@@ -201,7 +199,8 @@ def show_package_details(package, pkgs):
                         mn = '0.0.0'
                     if not mx:
                         mx = 'INF'
-                    puts(pretty('NaoQi Requirements') + '{} <= version <= {}'.format(mn, mx))
+                    puts(pretty('NaoQi Requirements') + '{} <= version <= {}'
+                         .format(mn, mx))
                 except IndexError:
                     pass
                 try:
@@ -212,7 +211,8 @@ def show_package_details(package, pkgs):
                 try:
                     max_len = 200
                     if len(p.description) > max_len:
-                        puts(pretty('Desciption') + '{}...'.format(p.description[:max_len]))
+                        puts(pretty('Desciption') + '{}...'
+                             .format(p.description[:max_len]))
                     else:
                         puts(pretty('Desciption') + '{}'.format(p.description))
                 except KeyError:
@@ -248,7 +248,8 @@ def show_running(behaviors, services, pkg_data):
 
 def show_dialog_header(conn):
     print('')
-    print('{:^60}'.format(' %s ------------------------------------------------- %s ') %
+    print('{:^60}'
+          .format(' %s ------------------------------------------------- %s ') %
           (col.blue('Human'), col.red((conn.get_robot_name()))))
 
 
