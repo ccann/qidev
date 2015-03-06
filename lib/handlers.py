@@ -98,13 +98,13 @@ def remove_handler(ns):
         completions = set()
         for conn in conns:
             completions.update(get_completions(conn, verb))
-        inp = io.prompt(list(completions))
+        inp = io.prompt_for_package(list(completions))
         for conn in conns:
             remove(conn, inp)
     else:
         conn = Connection(verb, ssh=False)
         completions = get_completions(conn)
-        inp = io.prompt(completions)
+        inp = io.prompt_for_package(completions)
         remove(conn, inp)
 
 
@@ -136,7 +136,7 @@ def show_handler(ns):
         io.show_installed_services(verb, pkg_data)
     elif ns.inspect:
         completions = [p.uuid for p in pkg_data] + [p.name for p in pkg_data]
-        inp = io.prompt(completions)
+        inp = io.prompt_for_package(completions)
         io.show_package_details(inp, pkg_data)
     elif ns.active:
         verb('Show active content')
