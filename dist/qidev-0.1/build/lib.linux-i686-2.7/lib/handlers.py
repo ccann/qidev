@@ -30,8 +30,9 @@ def install_handler(ns):
     verb = verbose_print(ns.verbose)
 
     def install(conn):
+        path = os.path.abspath(ns.path)
         try:
-            verb('Create package from directory: {}'.format(ns.path))
+            verb('Create package from directory: {}'.format(path))
             abs_path = conn.create_package(ns.path)
             verb('Transfer package to {}'.format(conn.hostname))
             pkg_name = conn.transfer(abs_path)
@@ -46,12 +47,11 @@ def install_handler(ns):
                   format(col.blue(pkg_name).replace('.pkg', ''),
                          col.magenta(conn.get_robot_name())))
         except IOError:
-            if ns.path:
-                print('%log: %log is not a project directory (does not contain manifest.xml)' %
-                      (col.red('error'), col.blue(ns.path)))
+            if os.path.exists(path):
+                print('{}: {} is not a project directory (does not contain manifest.xml)'
+                      .format(col.red('error'), col.blue(path)))
             else:
-                print('%log: %log is not a project directory (does not contain manifest.xml)' %
-                      (col.red('error'), col.blue(os.getcwd())))
+                print('{}: {} does not exist'.format(col.red('error'), col.blue(path)))
 
     if ns.ip:
         for conn in [Connection(verb, hostname=ip) for ip in ns.ip]:
