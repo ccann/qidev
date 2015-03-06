@@ -144,6 +144,11 @@ def prompt_for_behavior(behavior_names):
     return _prompt('Enter package-uuid/behavior-name', behavior_names)
 
 
+def prompt_for_package(package_names):
+    """Prompt the user for the name of a behavior, provide tab-completions"""
+    return _prompt('Enter package uuid or package name', package_names)
+
+
 def pretty(o):
     """Format objects nicely."""
     if isinstance(o, list):
