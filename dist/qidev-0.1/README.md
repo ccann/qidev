@@ -57,7 +57,7 @@ $ qidev remove
 
 Return key prompts for package name or UUID with tab-completion. The set of eligible packages is the union of packages installed on all targeted robots. If the package selected for removal is not installed on one of the specified targets, it's just skipped.
 
-## Show content
+## Show robot applications
 ```sh
 $ qidev show     # table of installed packages
 $ qidev show -s  # table of installed services (-s, --services)
@@ -67,14 +67,33 @@ $ qidev show -i  # inspect a package for details (-i, -p, --inspect, --package)
 Return key prompts for package name with tab-completion for package inpection.
 
 ## Starting and stopping behaviors and services
+Supports `--ip`.
 ```sh
-$ qidev start     # switch focus to an activity (with AutonomousLife)
-$ qidev stop      # stop focused activity (with AutonomousLife)
-$ qidev start -b  # (re)start a behavior or service (-b, --bm)
-$ qidev stop -b   # stop a behavior or service (-b, --bm)
-$ qidev start --id my-package-uuid  # specify package id, skip prompt
+$ qidev start     # switch focus to an activity with ALAutonomousLife
+$ qidev stop      # stop focused activity
+
+$ qidev start -s  # start a service with ALServiceManager (-s, --sm, --service)
+$ qidev stop -s   # stop a service (-s, --sm, --service)
+
+$ qidev start -b  # start a behavior with ALBehaviorManager (-b, --bm, --behavior)
+$ qidev stop -b   # stop a behavior (-b, --bm, --behavior)
 ```
-Return key prompts for behavior/service name with tab-completion in all cases
+Return key prompts for activity/behavior/service name with tab-completion.
+
+### More complex examples
+```sh
+# specify package id, skip prompt (--name, --id)
+$ qidev start --name my-package/my-behavior
+
+# start behavior with no tab-completion 
+$ qidev start -b --name my-package/my-behavior
+
+# start service with no tab-completion
+$ qidev start -s --name Music
+
+# stop service with no tab-completion on Michelangelo and 10.1.42.21
+$ qidev stop -s --name Daps --ip Michelangelo.local 10.1.42.21
+```
 
 ## Autonomous Life management
 ```sh
@@ -120,7 +139,7 @@ $ qidev log --cp  # copy tail-naoqi.log to local machine (--cp, --copy)
 $ qidev config log_path /where/I/want/tail-naoqi.log/written  # $HOME by default
 ```
 
-## Dialog (WIP)
+## Dialog (Work In Progress)
 ```sh
 $ qidev dialog  # interactive dialog window
 ```

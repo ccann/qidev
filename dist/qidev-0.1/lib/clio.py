@@ -15,6 +15,7 @@ if 'libedit' in readline.__doc__:
 else:
     readline.parse_and_bind("tab: complete")
 import sys
+import socket
 
 
 def bold(text):
@@ -33,6 +34,60 @@ def create_completer(completions):
         else:
             return None
     return completer
+
+
+def show_info(conn):
+    socket.setdefaulttimeout(3)
+    (hn, _, ips) = socket.gethostbyname_ex(conn.hostname)
+    ip = ips[0]
+    print('')
+    print('{}: {}'.format(bold('Robot'),
+                          col.magenta(conn.get_robot_name())))
+    if '.local' in hn:
+        print('{}: {}'.format(bold('Hostname'),
+                              col.blue(hn)))
+    print('{}: {}'.format(bold('IP'),
+                          col.blue(ip)))
+    system = conn.session.service('ALSystem')
+    print('{}: {}'.format(bold('NaoQi Version'),
+                          system.systemVersion()))
+    tts = conn.session.service('ALTextToSpeech')
+    lang = tts.getLanguage()
+    # print('{}: {}'.format(bold('Language'),
+    #                       lang))
+    al = tts.getAvailableLanguages()
+    al = ['{}'.format(col.green(l.upper())) if l == lang else l for l in al]
+    available_langs = ', '.join(al)
+    print('{}: {}'.format(bold('Languages'),
+                          available_langs))
+    audio = conn.session.service('ALAudioDevice')
+    print('{}: {}'.format(bold('Volume'),
+                          audio.getOutputVolume()))
+    posture = conn.session.service('ALRobotPosture')
+    post = posture.getPosture()
+    fam = posture.getPostureFamily()
+    print('{}: {} ({})'.format(bold('Posture'),
+                               post,
+                               fam))
+    life = conn.session.service('ALAutonomousLife')
+    fact = life.focusedActivity()
+    if not fact:
+        fact = 'none'
+    else:
+        fact = col.red(fact)
+    print('{}: {}'.format(bold('Focused Activity'),
+                          fact))
+    state = life.getState().upper()
+    if state == 'SOLITARY':
+        state = col.green(state)
+    elif state == 'DISABLED':
+        state = col.yellow(state)
+    else:
+        state = col.red(state)
+    print('{}: {}'.format(bold('ALife State'),
+                          state))
+
+    print('')
 
 
 def show_installed_packages(verb, pkgs):
@@ -69,27 +124,24 @@ def show_installed_services(verb, pkgs):
     print('')
 
 
-def prompt_for_package(completions):
-    """Prompt the user to specify the package name."""
+def _prompt(prompt_text, completions):
+    """Prompt the user with tab completions."""
     readline.set_completer(create_completer(completions))
     try:
-        inp = raw_input('Enter package name or UUID (tab to complete)\n> ')
+        inp = raw_input(prompt_text + ' (tab to complete) \n> ')
+        return inp
     except KeyboardInterrupt:
         sys.exit()
-    return inp
 
 
-def prompt_for_behavior(behaviors, completions=None):
-    """Prompt the user to specify behavior name."""
-    if not completions:
-        readline.set_completer(create_completer(behaviors))
-    else:
-        readline.set_completer(create_completer(completions))
-    try:
-        inp = raw_input('Enter package-uuid/behavior-name (tab to complete)\n> ')
-    except KeyboardInterrupt:
-        sys.exit()
-    return inp
+def prompt_for_service(service_names):
+    """Prompt the user for the name of a service, provide tab-completions"""
+    return _prompt('Enter service name', service_names)
+
+
+def prompt_for_behavior(behavior_names):
+    """Prompt the user for the name of a behavior, provide tab-completions"""
+    return _prompt('Enter package-uuid/behavior-name', behavior_names)
 
 
 def pretty(o):

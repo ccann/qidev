@@ -60,6 +60,12 @@ def install_handler(ns):
         install(Connection(verb))
 
 
+def info_handler(ns):
+    verb = verbose_print(ns.verbose)
+    conn = Connection(verb, ssh=False)
+    io.show_info(conn)
+
+
 def remove_handler(ns):
     """Remove a package from the robot."""
     verb = verbose_print(ns.verbose)
@@ -113,6 +119,7 @@ def connect_handler(ns):
     """Change hostname field of the .qidev file."""
     verb = verbose_print(ns.verbose)
     verb('Set hostname to {}'.format(ns.hostname))
+    Connection(verb, hostname=ns.hostname, ssh=False)
     config.write_field('hostname', ns.hostname)
     print('set {} to {}'.format(col.blue('hostname'),
                                 col.magenta(ns.hostname)))

@@ -32,6 +32,9 @@ def main():
     connect_parser = subs.add_parser('connect', help='shortcut to config hostname')
     connect_parser.add_argument('hostname', help='hostname of the robot', type=str)
 
+
+    info_parser = subs.add_parser('info', help="what's up?")
+
     # ########################################################
     install_parser = subs.add_parser('install',
                                      help='package and install a project directory on a robot')
